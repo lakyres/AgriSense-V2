@@ -22,8 +22,14 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+    "extra": {
+      "expo-router": {
+        "unstable_settings": {
+          "typedRoutes": true
+        }
+      }
+    },
     "plugins": [
-      "expo-router",
       [
         "expo-splash-screen",
         {
