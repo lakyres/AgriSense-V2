@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
+    "name": "react_native_harvguard",
+    "slug": "react_native_harvguard",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "harvguard",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
