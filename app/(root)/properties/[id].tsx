@@ -7,7 +7,7 @@ const Property = () => {
 
   return (
     <View>
-      <Text>Property {id} </Text>
+      <Text>Property {id}</Text>
     </View>
   )
 }
