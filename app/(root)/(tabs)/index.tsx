@@ -10,7 +10,10 @@ export default function Index() {
         alignItems: "center",
       }}
     >
-      <Text className="font-bold my-10 font-rubik text-3xl">Welcome to HarvGuard</Text>
+      <Text style={{ fontFamily: "Rubik-Bold", fontSize: 24, marginBottom: 10 }}>
+  Welcome to HarvGuard
+</Text>
+
       <Link href="/sign-in">Sign In</Link>
       <Link href="/explore">Explore</Link>
       <Link href="/profile">Profile</Link>
