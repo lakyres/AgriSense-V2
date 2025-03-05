@@ -1,13 +1,23 @@
 import React from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import images from '@/constants/images';
 import icons from '@/constants/icons';
+import {login} from '@/lib/appwrite';
 
 const SignIn = () => {
-    const handleLogin = () => {};
+    const handleLogin = async () => {
+        const result = await login();
 
+        if (result) {
+            console.log ("Logged in successfully");
+        }
+        else {
+            Alert.alert('Error', "Failed to login");
+        };
+    };
+    
     return (
         <SafeAreaView style={{ backgroundColor: "white", flex: 1 }}>
             <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
@@ -25,7 +35,7 @@ const SignIn = () => {
                         textTransform: "uppercase", 
                         color: "#4B5563" // Equivalent to text-black-200
                     }}>
-                        Welcome to HarvGuard
+                        Welcome to AgriSense
                     </Text>
 
                     <Text style={{ 
@@ -46,7 +56,7 @@ const SignIn = () => {
                         color: "#4B5563", // Equivalent to text-black-200
                         marginTop: 48 
                     }}>
-                        Login to HarvGuard with Google
+                        Login to AgriSense with Google
                     </Text>
 
                     <TouchableOpacity 
@@ -65,9 +75,9 @@ const SignIn = () => {
                     >
                         <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
                             <Image 
-                                resizeMode="contain" 
-                                source={icons.google} 
-                                style={{ width: 20, height: 20, marginHorizontal: "auto" }} 
+                                    resizeMode="contain" 
+                                    source={icons.google} 
+                                    style={{ width: 20, height: 20 }} 
                             />
                             <Text style={{ 
                                 fontFamily: "Rubik-Medium", 
