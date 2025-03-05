@@ -1,57 +1,60 @@
-import {createContext, ReactNode} from 'react';
-import {useAppwrite} from '@/lib/useAppwrite';
-import {getCurrentUser} from './appwrite';
+import React, { createContext, useContext, ReactNode } from "react";
 
-
-interface User {
-    $id: string;
-    name: string;
-    email: string;
-    avatar: string;
-} 
+import { getCurrentUser } from "./appwrite";
+import { useAppwrite } from "./useAppwrite";
+import { Redirect } from "expo-router";
 
 interface GlobalContextType {
-    isLogged: boolean;
-    user: User | null;
-    loading: boolean;
-    refetch: (newParams?: Record<string, string | number>) =>
-        Promise<void>;
+  isLogged: boolean;
+  user: User | null;
+  loading: boolean;
+  refetch: (newParams: Record<string, string | number>) => Promise<void>;
+}
+
+interface User {
+  $id: string;
+  name: string;
+  email: string;
+  avatar: string;
 }
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 
-export const GlobalProvider = ({children}: {children: React.ReactNode}) => {
+interface GlobalProviderProps {
+  children: ReactNode;
+}
 
-    const {
-        data: user,
+export const GlobalProvider = ({ children }: GlobalProviderProps) => {
+  const {
+    data: user,
+    loading,
+    refetch,
+  } = useAppwrite({
+    fn: getCurrentUser,
+  });
+
+  const isLogged = !!user;
+
+  return (
+    <GlobalContext.Provider
+      value={{
+        isLogged,
+        user,
         loading,
         refetch,
-      } = useAppwrite({
-        fn: getCurrentUser,
-      });
-
-      const isLogged = !!user;
-
-      console.log(JSON.stringify(user, null, 2));
-
-    return (
-        <GlobalContext.Provider value={{
-            isLogged,
-            user,
-            loading,
-            refetch,
-        }}>
-            {children}
-        </GlobalContext.Provider>
-    );
+      }}
+    >
+      {children}
+    </GlobalContext.Provider>
+  );
 };
 
 export const useGlobalContext = (): GlobalContextType => {
-    const context = useContext(GlobalContext);
-    if (!context)
-      throw new Error("useGlobalContext must be used within a GlobalProvider");
-  
-    return context;
-  };
-  
-  export default GlobalProvider;
+  const context = useContext(GlobalContext);
+  if (!context)
+    throw new Error("useGlobalContext must be used within a GlobalProvider");
+
+  return context;
+};
+
+export default GlobalProvider;

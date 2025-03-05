@@ -11,7 +11,7 @@ export default function Index() {
       }}
     >
       <Text style={{ fontFamily: "Rubik-Bold", fontSize: 24, marginBottom: 10 }}>
-  Welcome to HarvGuard
+  Welcome to AgriSense
 </Text>
 
       <Link href="/sign-in">Sign In</Link>
