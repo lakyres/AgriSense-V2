@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "react_native_harvguard",
-    "slug": "react_native_harvguard",
+    "name": "react_native_agrisense",
+    "slug": "react_native_agrisense",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "harvguard",
+    "scheme": "agrisense",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
