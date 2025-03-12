@@ -9,6 +9,9 @@ import map from "@/assets/images/map.png";
 import noResult from "@/assets/images/no-result.png";
 import latestGrowth from "@/assets/images/latest-growth.png";
 import pest from "@/assets/images/pest.png";
+import seedling from "@/assets/images/seedling.png";
+import vegetative from "@/assets/images/vegetative.png";
+import harvest from "@/assets/images/harvest.png";
 
 export default {
   onboarding,
@@ -22,4 +25,7 @@ export default {
   noResult,
   latestGrowth,
   pest,
+  seedling,
+  vegetative,
+  harvest,
 };
