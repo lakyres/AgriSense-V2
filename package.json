@@ -33,6 +33,7 @@
     "expo-symbols": "~0.2.2",
     "expo-system-ui": "~4.0.8",
     "expo-web-browser": "~14.0.2",
+    "firebase": "^11.6.0",
     "metro": "^0.81.2",
     "nativewind": "^4.1.23",
     "postcss": "^8.5.3",
