@@ -1,88 +1,142 @@
-import { Text, View, Image, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useEffect, useState } from 'react';
+import { Text, View, Image, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Card from "@/components/ui/card"; // Ensure this exists
-import images from "@/constants/images";
-import icons from "@/constants/icons";
-import { useRouter } from "expo-router";
+import { getPredictions, Prediction } from '@/utils/getPredictions';
+import { useThemeContext } from '@/lib/ThemeProvider';
 
 export default function Dashboard() {
-  const router = useRouter();
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { isDarkMode } = useThemeContext();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await getPredictions();
+        setPredictions(data);
+      } catch (error) {
+        console.error("Error fetching predictions:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   return (
-    <SafeAreaView style={{ backgroundColor: 'white', height: '100%' }}>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20 }}>
-        
-        {/* Header Section */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Image source={images.avatar} style={{ width: 48, height: 48, borderRadius: 24 }} />
-            <View style={{ marginLeft: 12 }}>
-              <Text style={{ fontSize: 12, color: 'gray', fontFamily: 'Rubik-Regular' }}>Hello!</Text>
-              <Text style={{ fontSize: 18, color: 'gray', fontFamily: 'Rubik-Medium' }}>Kyla Marjes</Text>
-            </View>
-          </View>
-          <Image source={icons.bell} style={{ width: 24, height: 24 }} />
-        </View>
+    <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        <Text style={[styles.header, isDarkMode && styles.textLight]}>Prediction History</Text>
 
-        {/* Growth Monitoring */}
-        <Card style={{ marginTop: 20, padding: 16, backgroundColor: '#d4edda', borderRadius: 16 }}>
-          <Text style={{ fontSize: 18, fontFamily: 'Rubik-Medium', color: '#333' }}>Latest Growth Image</Text>
-          <Image source={images.latestGrowth} style={{ width: '100%', height: 192, marginTop: 12, borderRadius: 8 }} resizeMode="cover" />
-        </Card>
+        {loading ? (
+          <ActivityIndicator size="large" color={isDarkMode ? "#86efac" : "#16A34A"} />
+        ) : (
+          predictions.length > 0 ? (
+            predictions.map((item) => (
+              <View key={item.id} style={[styles.card, isDarkMode && styles.cardDark]}>
+                {item.image_url && (
+                  <Image source={{ uri: item.image_url }} style={styles.image} />
+                )}
+                <Text style={[styles.timestamp, isDarkMode && styles.textMuted]}>{item.timestamp}</Text>
 
-        {/* Growth Stats Section */}
-        <View style={{ marginTop: 20, flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Card style={styles.card}>
-            <Text style={styles.cardText}>Leaf Count</Text>
-            <Text style={styles.cardValue}>5</Text>
-          </Card>
-          <Card style={styles.card}>
-            <Text style={styles.cardText}>Leaf Area</Text>
-            <Text style={styles.cardValue}>1200 mm²</Text>
-          </Card>
-          <Card style={styles.card}>
-            <Text style={styles.cardText}>Height</Text>
-            <Text style={styles.cardValue}>25 cm</Text>
-          </Card>
-        </View>
-
-        {/* Maturity Prediction Section */}
-        <TouchableOpacity onPress={() => router.push("/maturity")} activeOpacity={0.8}>
-          <View style={{ marginTop: 20, padding: 16, backgroundColor: "#fff3cd", borderRadius: 16 }}>
-            <Text style={{ fontSize: 18, fontWeight: "bold", color: "#333" }}>Maturity Prediction</Text>
-            <Text style={{ fontSize: 24, fontWeight: "bold", color: "#856404", marginTop: 8 }}>Estimated Harvest: 10 days</Text>
-          </View>
-        </TouchableOpacity>
-        {/* Pest Detection Section */}
-        <TouchableOpacity onPress={() => router.push("/pest-detection")} activeOpacity={0.8}>
-          <View style={{ marginTop: 20, padding: 16, backgroundColor: "#f8d7da", borderRadius: 16 }}>
-            <Text style={{ fontSize: 18, fontWeight: "bold", color: "#333" }}>Pest Detection</Text>
-            <Text style={{ fontSize: 20, fontWeight: "bold", color: "#721c24", marginTop: 8 }}>No Pest Detected ✅</Text>
-          </View>
-        </TouchableOpacity>
-
+                <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                  Growth Stage: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.maturity}</Text>
+                </Text>
+                <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                  Pest: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.pest}</Text>
+                </Text>
+                <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                  Temperature: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.air_temp}°C</Text>
+                </Text>
+                <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                  Humidity: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.humidity}%</Text>
+                </Text>
+                <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                  Light: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.light_intensity} lux</Text>
+                </Text>
+                <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                  Water Temp: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.water_temp}°C</Text>
+                </Text>
+                <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                  Height: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.height} cm</Text>
+                </Text>
+                <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                  Leaf Area: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.leaf_area} cm²</Text>
+                </Text>
+                <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                  Leaf Count: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.leaf_count}</Text>
+                </Text>
+              </View>
+            ))
+          ) : (
+            <Text style={[styles.noData, isDarkMode && styles.textMuted]}>No data available.</Text>
+          )
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    padding: 16,
-    width: '30%',
+  container: {
+    flex: 1,
     backgroundColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    borderRadius: 8,
   },
-  cardText: {
-    fontSize: 14,
-    color: 'gray',
+  containerDark: {
+    backgroundColor: '#1f2937',
   },
-  cardValue: {
-    fontSize: 18,
+  header: {
+    fontSize: 22,
     fontWeight: 'bold',
-    color: 'green',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#15803D',
+  },
+  card: {
+    backgroundColor: '#ECFDF5',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderColor: '#D1FAE5',
+    borderWidth: 1,
+    shadowColor: '#15803D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+  },
+  cardDark: {
+    backgroundColor: '#374151',
+    borderColor: '#4B5563',
+    shadowColor: 'transparent',
+  },
+  image: {
+    width: '100%',
+    height: 180,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  timestamp: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  label: {
+    fontSize: 14,
+    color: '#065F46',
+  },
+  value: {
+    fontWeight: 'bold',
+    color: '#064E3B',
+  },
+  noData: {
+    textAlign: 'center',
+    color: '#9CA3AF',
+    marginTop: 40,
+  },
+  textLight: {
+    color: '#ffffff',
+  },
+  textMuted: {
+    color: '#D1D5DB',
   },
 });

@@ -3,6 +3,7 @@ import { ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useGlobalContext } from "@/lib/global-provider";
 import { Stack } from "expo-router";
+import { ThemeProvider } from '@/lib/ThemeProvider';
 
 export default function AppLayout() {
   const { loading, isLogged } = useGlobalContext();
@@ -22,13 +23,12 @@ export default function AppLayout() {
   }
 
   return (
+    <ThemeProvider>
     <Stack>
       {/* Load Bottom Tabs (Dashboard, Explore, Profile) */}
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-      {/* Full-Screen Navigation for Additional Screens */}
-      <Stack.Screen name="maturity" options={{ title: "Maturity Prediction" }} />
-      <Stack.Screen name="pest-detection" options={{ title: "Pest Detection" }} />
     </Stack>
+    </ThemeProvider>
   );
 }

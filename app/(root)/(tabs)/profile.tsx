@@ -1,111 +1,95 @@
-import {
-  Alert,
-  Image,
-  ImageSourcePropType,
-  SafeAreaView,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, useColorScheme } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useRouter } from 'expo-router';
+import { useThemeContext } from '@/lib/ThemeProvider';
 
-import { logout } from "@/lib/appwrite";
-import { useGlobalContext } from "@/lib/global-provider";
-
-import icons from "@/constants/icons";
-import { settings } from "@/constants/data";
-
-interface SettingsItemProp {
-  icon: ImageSourcePropType;
-  title: string;
-  onPress?: () => void;
-  textStyle?: object;
-  showArrow?: boolean;
-}
-
-const SettingsItem = ({
-  icon,
-  title,
-  onPress,
-  textStyle,
-  showArrow = true,
-}: SettingsItemProp) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 }}
-  >
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <Image source={icon} style={{ width: 24, height: 24 }} />
-      <Text style={[{ fontSize: 18, fontFamily: 'Rubik-Medium', color: '#333' }, textStyle]}>
-        {title}
-      </Text>
-    </View>
-
-    {showArrow && <Image source={icons.rightArrow} style={{ width: 20, height: 20 }} />}
-  </TouchableOpacity>
-);
-
-const Profile = () => {
-  const { user, refetch } = useGlobalContext();
+export default function Settings() {
+  const router = useRouter();
+  const { isDarkMode, toggleTheme } = useThemeContext();
+  const colorScheme = useColorScheme();
 
   const handleLogout = async () => {
-    const result = await logout();
-    if (result) {
-      Alert.alert("Success", "Logged out successfully");
-      refetch({});
-    } else {
-      Alert.alert("Error", "Failed to logout");
-    }
+    await signOut(auth);
+    router.replace('/sign-in');
   };
 
+  
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32, paddingHorizontal: 28 }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20 }}>
-          <Text style={{ fontSize: 24, fontFamily: 'Rubik-Bold' }}>Profile</Text>
-          <Image source={icons.bell} style={{ width: 20, height: 20 }} />
-        </View>
+    <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
+      <Text style={[styles.header, isDarkMode && styles.textDark]}>Settings</Text>
 
-        <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 20 }}>
-          <View style={{ flexDirection: 'column', alignItems: 'center', marginTop: 20 }}>
-            <Image
-              source={{ uri: user?.avatar }}
-              style={{ width: 176, height: 176, borderRadius: 88 }}
-            />
-            <TouchableOpacity style={{ position: 'absolute', bottom: 44, right: 8 }}>
-              <Image source={icons.edit} style={{ width: 36, height: 36 }} />
-            </TouchableOpacity>
+      <View style={[styles.card, isDarkMode && styles.cardDark]}>
+        <Text style={[styles.label, isDarkMode && styles.textDark]}>Logged in as:</Text>
+        <Text style={[styles.value, isDarkMode && styles.textDark]}>{auth.currentUser?.email}</Text>
+      </View>
 
-            <Text style={{ fontSize: 24, fontFamily: 'Rubik-Bold', marginTop: 8 }}>{user?.name}</Text>
-          </View>
-        </View>
+      <View style={[styles.card, isDarkMode && styles.cardDark]}>
+  <Text style={[styles.label, isDarkMode && styles.textDark]}>Dark Mode</Text>
+  <Switch
+    value={isDarkMode}
+    onValueChange={toggleTheme}
+    trackColor={{ false: '#d1d5db', true: '#065F46' }}
+    thumbColor={isDarkMode ? '#10B981' : '#f4f4f5'}
+  />
+</View>
 
-        <View style={{ flexDirection: 'column', marginTop: 40 }}>
-          <SettingsItem icon={icons.calendar} title="My Bookings" />
-          <SettingsItem icon={icons.wallet} title="Payments" />
-        </View>
-
-        <View style={{ flexDirection: 'column', marginTop: 20, borderTopWidth: 1, paddingTop: 20, borderColor: '#0061FF1A' }}>
-          {settings.slice(2).map((item, index) => (
-            <SettingsItem key={index} {...item} />
-          ))}
-        </View>
-
-        <View style={{ flexDirection: 'column', borderTopWidth: 1, marginTop: 20, paddingTop: 20, borderColor: '#0061FF1A' }}>
-          <SettingsItem
-            icon={icons.logout}
-            title="Logout"
-            textStyle={{ color: '#FF0000' }}
-            showArrow={false}
-            onPress={handleLogout}
-          />
-        </View>
-      </ScrollView>
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
-};
+}
 
-export default Profile;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+    padding: 24,
+  },
+  containerDark: {
+    backgroundColor: '#1f2937',
+  },
+  header: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 24,
+    color: '#15803D',
+  },
+  card: {
+    backgroundColor: '#ECFDF5',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  cardDark: {
+    backgroundColor: '#374151',
+  },
+  label: {
+    fontSize: 14,
+    color: '#047857',
+  },
+  value: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#065F46',
+  },
+  textDark: {
+    color: 'white',
+  },
+  logoutButton: {
+    backgroundColor: '#EF4444',
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  logoutText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});

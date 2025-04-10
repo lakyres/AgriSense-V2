@@ -1,26 +1,27 @@
 import React, { useState } from 'react';
-import { View, TextInput, Alert, Text, ImageBackground, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, Alert, ImageBackground, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'expo-router';
 import { auth } from '@/lib/firebase';
 import images from '@/constants/images';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function SignIn() {
+const SignUp = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
+  const handleSignUp = async () => {
     try {
       setLoading(true);
-      await signInWithEmailAndPassword(auth, email, password);
-      router.replace('/');
+      await createUserWithEmailAndPassword(auth, email, password);
+      Alert.alert("Success", "Account created successfully!");
+      router.replace('/sign-in');
     } catch (error: any) {
-      Alert.alert('Login failed', error.message);
+      Alert.alert("Sign Up Failed", error.message);
     } finally {
       setLoading(false);
     }
@@ -28,17 +29,26 @@ export default function SignIn() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <ImageBackground source={images.onboarding} resizeMode="cover" style={{ flex: 1 }}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <ImageBackground
+        source={images.onboarding}
+        resizeMode="cover"
+        style={{ flex: 1 }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
           <ScrollView contentContainerStyle={styles.scroll}>
             <View style={styles.overlay}>
-              <Text style={styles.title}>Welcome to AgriSense</Text>
+              <Text style={styles.title}>Create Your Account</Text>
 
               <TextInput
                 placeholder="Email"
                 placeholderTextColor="#9CA3AF"
                 value={email}
                 onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
                 style={styles.input}
               />
 
@@ -56,12 +66,16 @@ export default function SignIn() {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-                <Text style={styles.buttonText}>{loading ? "Logging in..." : "Log In"}</Text>
+              <TouchableOpacity style={styles.button} onPress={handleSignUp} disabled={loading}>
+                {loading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={styles.buttonText}>Sign Up</Text>
+                )}
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={() => router.push('/sign-up')}>
-                <Text style={styles.link}>Don’t have an account? Sign up</Text>
+              <TouchableOpacity onPress={() => router.push('/sign-in')}>
+                <Text style={styles.link}>Already have an account? Log in</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -69,7 +83,7 @@ export default function SignIn() {
       </ImageBackground>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   scroll: {
@@ -124,3 +138,5 @@ const styles = StyleSheet.create({
     fontFamily: 'Rubik-Regular',
   },
 });
+
+export default SignUp;

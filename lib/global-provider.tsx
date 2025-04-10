@@ -1,21 +1,11 @@
-import React, { createContext, useContext, ReactNode } from "react";
-
-import { getCurrentUser } from "./appwrite";
-import { useAppwrite } from "./useAppwrite";
-import { Redirect } from "expo-router";
+import React, { createContext, useContext, ReactNode, useEffect, useState } from "react";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 interface GlobalContextType {
   isLogged: boolean;
-  user: User | null;
+  user: FirebaseUser | null;
   loading: boolean;
-  refetch: (newParams: Record<string, string | number>) => Promise<void>;
-}
-
-interface User {
-  $id: string;
-  name: string;
-  email: string;
-  avatar: string;
 }
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
@@ -25,13 +15,17 @@ interface GlobalProviderProps {
 }
 
 export const GlobalProvider = ({ children }: GlobalProviderProps) => {
-  const {
-    data: user,
-    loading,
-    refetch,
-  } = useAppwrite({
-    fn: getCurrentUser,
-  });
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const isLogged = !!user;
 
@@ -41,7 +35,6 @@ export const GlobalProvider = ({ children }: GlobalProviderProps) => {
         isLogged,
         user,
         loading,
-        refetch,
       }}
     >
       {children}

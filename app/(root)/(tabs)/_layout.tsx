@@ -1,53 +1,67 @@
 import { Tabs } from "expo-router";
-import { Image, ImageSourcePropType, Text, View } from "react-native";
-
+import { Image, Text, View, ImageSourcePropType } from "react-native";
 import icons from "@/constants/icons";
+import { useThemeContext } from "@/lib/ThemeProvider";
 
 const TabIcon = ({
   focused,
   icon,
   title,
+  isDarkMode,
 }: {
   focused: boolean;
   icon: ImageSourcePropType;
   title: string;
+  isDarkMode: boolean;
 }) => (
-  <View style={{ flex: 1, marginTop: 12, flexDirection: 'column', alignItems: 'center' }}>
+  <View
+    style={{
+      alignItems: "center",
+      justifyContent: "center",
+      paddingTop: 16, // ✅ adds breathing room from the top
+    }}
+  >
     <Image
       source={icon}
       style={{
-        tintColor: focused ? "#0061FF" : "#666876",
-        resizeMode: "contain",
+        tintColor: focused
+          ? isDarkMode ? "#86efac" : "#16A34A"
+          : isDarkMode ? "#9CA3AF" : "#666876",
         width: 24,
         height: 24,
+        resizeMode: "contain",
+        marginBottom: 2,
       }}
     />
     <Text
       style={{
-        color: focused ? "#4f46e5" : "#666876",
-        fontFamily: focused ? "Rubik-Medium" : "Rubik",
-        fontSize: 12,
-        width: '100%',
-        textAlign: 'center',
-        marginTop: 4,
+        color: focused
+          ? isDarkMode ? "#86efac" : "#16A34A"
+          : isDarkMode ? "#9CA3AF" : "#666876",
+        fontFamily: focused ? "Rubik-Medium" : "Rubik-Regular",
+        fontSize: 11,
       }}
+      numberOfLines={1}
+      adjustsFontSizeToFit
     >
       {title}
     </Text>
   </View>
 );
 
-const TabsLayout = () => {
+export default function TabsLayout() {
+  const { isDarkMode } = useThemeContext();
+
   return (
     <Tabs
       screenOptions={{
         tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: "white",
-          position: "absolute",
-          borderTopColor: "#0061FF1A",
+          backgroundColor: isDarkMode ? "#111827" : "white",
+          borderTopColor: isDarkMode ? "#374151" : "#D1FAE5",
           borderTopWidth: 1,
-          minHeight: 70,
+          height: 72, // ✅ adjusted for breathing room
+          paddingBottom: 8,
         },
       }}
     >
@@ -57,32 +71,30 @@ const TabsLayout = () => {
           title: "Dashboard",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} icon={icons.home} title="Home" />
+            <TabIcon focused={focused} icon={icons.home} title="Home" isDarkMode={isDarkMode} />
           ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: "Explore",
+          title: "Scan",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} icon={icons.search} title="Explore" />
+            <TabIcon focused={focused} icon={icons.search} title="Scan" isDarkMode={isDarkMode} />
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: "Settings",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} icon={icons.person} title="Profile" />
+            <TabIcon focused={focused} icon={icons.person} title="Settings" isDarkMode={isDarkMode} />
           ),
         }}
       />
     </Tabs>
   );
-};
-
-export default TabsLayout;
+}
