@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { WebView } from 'react-native-webview'; // ✅ Add this
+import { WebView } from 'react-native-webview';
 import icons from '@/constants/icons';
 import { useThemeContext } from '@/lib/ThemeProvider';
 
 export default function Explore() {
   const { isDarkMode } = useThemeContext();
+  const [showLive, setShowLive] = useState(false); // toggle for stream visibility
 
   return (
     <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
@@ -15,15 +16,30 @@ export default function Explore() {
         Capture an image to analyze Pechay growth and detect pests.
       </Text>
 
-      {/* ✅ Live Webcam Feed via WebView */}
-      <View style={styles.cameraWrapper}>
-        <WebView
-          source={{ uri: 'http://192.168.1.215:8080/video' }} // 🔁 Replace with your real IP
-          style={styles.camera}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-        />
-      </View>
+      {/* ✅ Button to show stream */}
+      {!showLive && (
+        <TouchableOpacity style={styles.button} onPress={() => setShowLive(true)}>
+          <Text style={styles.buttonText}>Show Live</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* ✅ WebView stream + capture button only shown after "Show Live" */}
+      {showLive && (
+        <>
+          <View style={styles.cameraWrapper}>
+            <WebView
+              source={{ uri: 'http://192.168.1.215:8080/video' }}
+              style={styles.camera}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+            />
+          </View>
+
+          <TouchableOpacity style={styles.captureButton} onPress={() => alert('📸 Captured!')}>
+            <Text style={styles.buttonText}>Capture Image</Text>
+          </TouchableOpacity>
+        </>
+      )}
 
       <Image
         source={icons.wifi}
@@ -32,10 +48,6 @@ export default function Explore() {
           { tintColor: isDarkMode ? '#86efac' : '#16A34A' },
         ]}
       />
-
-      <TouchableOpacity style={styles.button}>
-        <Text style={styles.buttonText}>Scan Now</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -78,7 +90,7 @@ const styles = StyleSheet.create({
   image: {
     width: 100,
     height: 100,
-    marginBottom: 24,
+    marginTop: 16,
   },
   button: {
     backgroundColor: '#16A34A',
@@ -86,6 +98,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     borderRadius: 12,
     elevation: 2,
+    marginBottom: 16,
+  },
+  captureButton: {
+    backgroundColor: '#2563eb',
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 12,
+    elevation: 2,
+    marginBottom: 12,
   },
   buttonText: {
     color: 'white',
