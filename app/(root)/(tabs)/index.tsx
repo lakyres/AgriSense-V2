@@ -34,9 +34,17 @@ export default function Dashboard() {
           predictions.length > 0 ? (
             predictions.map((item) => (
               <View key={item.id} style={[styles.card, isDarkMode && styles.cardDark]}>
-                {item.image_url && (
+                {/* ⚡ Base64 safety check before rendering */}
+                {item.image_url && item.image_url.length < 100000 ? (
                   <Image source={{ uri: item.image_url }} style={styles.image} />
+                ) : (
+                  item.image_url && (
+                    <Text style={{ color: isDarkMode ? "#9CA3AF" : "#6B7280", marginBottom: 12 }}>
+                      (Image too large to display)
+                    </Text>
+                  )
                 )}
+
                 <Text style={[styles.timestamp, isDarkMode && styles.textMuted]}>{item.timestamp}</Text>
 
                 <Text style={[styles.label, isDarkMode && styles.textMuted]}>
