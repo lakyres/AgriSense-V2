@@ -66,7 +66,10 @@ export default function Dashboard() {
               </View>
 
               <Text style={[styles.timestamp, isDarkMode && styles.textMuted]}>{item.id}</Text>
-
+              
+              <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                Plant Count: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.growth.plant_count}</Text>
+              </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
                 Growth Stage: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.growth.growth_stage}</Text>
               </Text>
