@@ -68,7 +68,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Dashboard",
+          title: "Home",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
             <TabIcon focused={focused} icon={icons.home} title="Home" isDarkMode={isDarkMode} />
@@ -76,7 +76,17 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="history"
+        options={{
+          title: "History",
+          headerShown: false,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused} icon={icons.search} title="History" isDarkMode={isDarkMode} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="scan"
         options={{
           title: "Scan",
           headerShown: false,
@@ -86,7 +96,17 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="about"
+        options={{
+          title: "About",
+          headerShown: false,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused} icon={icons.search} title="About" isDarkMode={isDarkMode} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
         options={{
           title: "Settings",
           headerShown: false,

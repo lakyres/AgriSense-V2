@@ -8,8 +8,7 @@ import { getDetections, Detection } from "@/utils/getDetections";
 import { useThemeContext } from "@/lib/ThemeProvider";
 import { auth } from "@/lib/firebase";
 
-
-export default function Dashboard() {
+export default function Home() {
   const [detections, setDetections] = useState<Detection[]>([]);
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -45,12 +44,83 @@ export default function Dashboard() {
             Logged in as: {userEmail}
           </Text>
         )}
-        <Text style={[styles.header, isDarkMode && styles.textLight]}>Detection History</Text>
+
+        {/* Updated title + emoji subtitle */}
+        <View style={{ marginBottom: 20, alignItems: 'center' }}>
+          <Text style={[styles.header, isDarkMode && styles.textLight]}>
+            How’s My Pechay?
+          </Text>
+
+          {detections.length > 0 ? (
+            <>
+              {detections[0].growth.pest_detected && detections[0].growth.pest_detected !== "None" ? (
+                <Text style={[styles.subtitle, isDarkMode && styles.textMuted]}>
+                  ⚠️ Pest detected — keep an eye out!
+                </Text>
+              ) : (
+                <Text style={[styles.subtitle, isDarkMode && styles.textMuted]}>
+                  ✅ Looks healthy today!
+                </Text>
+              )}
+            </>
+          ) : (
+            <Text style={[styles.subtitle, isDarkMode && styles.textMuted]}>
+              📡 Waiting for scan results...
+            </Text>
+          )}
+        </View>
+
+        {detections.length > 0 && (
+          <>
+            {/* Latest Scan Summary */}
+            <View style={[styles.summaryCard, isDarkMode && styles.cardDark]}>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#86efac' : '#15803D' }]}>
+                ✅ Latest Scan Summary
+              </Text>
+              <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                Growth Stage: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detections[0].growth.growth_stage}</Text>
+              </Text>
+              <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                Pest Detected: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detections[0].growth.pest_detected}</Text>
+              </Text>
+              <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                Moisture Level: <Text style={[styles.value, isDarkMode && styles.textLight]}>
+                  {detections[0].environment.humidity_percent >= 60 ? 'Good' : 'Low'}
+                </Text>
+              </Text>
+            </View>
+
+            {/* Real-Time Stats */}
+            <View style={[styles.summaryCard, isDarkMode && styles.cardDark]}>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#86efac' : '#15803D' }]}>
+                📊 Real-time Stats
+              </Text>
+              <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                Plant Count: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detections[0].growth.plant_count}</Text>
+              </Text>
+              <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                Healthy: <Text style={[styles.value, isDarkMode && styles.textLight]}>
+                  {
+                    detections[0].growth.plant_count -
+                    (detections[0].growth.pest_detected && detections[0].growth.pest_detected !== "None" ? 1 : 0)
+                  }
+                </Text>
+              </Text>
+              <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                Pest-Detected: <Text style={[styles.value, isDarkMode && styles.textLight]}>
+                  {detections[0].growth.pest_detected && detections[0].growth.pest_detected !== "None" ? 1 : 0}
+                </Text>
+              </Text>
+            </View>
+          </>
+        )}
 
         {loading ? (
           <ActivityIndicator size="large" color={isDarkMode ? "#86efac" : "#16A34A"} />
         ) : detections.length === 0 ? (
-          <Text style={[styles.noData, isDarkMode && styles.textMuted]}>No detections found.</Text>
+          <Text style={[styles.noData, isDarkMode && styles.textMuted]}>
+            No detections found.
+          </Text>
         ) : (
           detections.map((item) => (
             <View key={item.id} style={[styles.card, isDarkMode && styles.cardDark]}>
@@ -66,7 +136,7 @@ export default function Dashboard() {
               </View>
 
               <Text style={[styles.timestamp, isDarkMode && styles.textMuted]}>{item.id}</Text>
-              
+
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
                 Plant Count: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.growth.plant_count}</Text>
               </Text>
@@ -122,14 +192,33 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 4,
     textAlign: 'center',
     color: '#15803D',
+  },
+  subtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#4B5563',
+    marginTop: 4,
   },
   emailText: {
     fontSize: 14,
     textAlign: "center",
     color: "#4B5563",
+    marginBottom: 10,
+  },
+  summaryCard: {
+    backgroundColor: '#ECFDF5',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderColor: '#D1FAE5',
+    borderWidth: 1,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
     marginBottom: 10,
   },
   card: {

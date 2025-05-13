@@ -18,7 +18,7 @@ export default function SignIn() {
     try {
       setLoading(true);
       await signInWithEmailAndPassword(auth, email, password);
-      router.replace('/');
+      router.replace('/(root)/(tabs)/index');
     } catch (error: any) {
       Alert.alert('Login failed', error.message);
     } finally {
