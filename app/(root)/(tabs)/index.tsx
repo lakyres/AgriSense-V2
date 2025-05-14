@@ -31,18 +31,9 @@ export interface Detection {
 export default function Home() {
   const [detection, setDetection] = useState<Detection | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
   const { isDarkMode } = useThemeContext();
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (user) {
-      setUserEmail(user.email);
-      console.log("👤 Logged in user:", user.email);
-    } else {
-      console.warn("❌ No user signed in.");
-    }
-
     const fetchLatestDetection = async () => {
       try {
         const indexRef = storageRef(storage, "detections/detection_index.json");
@@ -105,12 +96,6 @@ export default function Home() {
   return (
     <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
-        {userEmail && (
-          <Text style={[styles.emailText, isDarkMode && styles.textMuted]}>
-            Logged in as: {userEmail}
-          </Text>
-        )}
-
         <View style={{ marginBottom: 20, alignItems: 'center' }}>
           <Text style={[styles.header, isDarkMode && styles.textLight]}>
             How’s My Pechay?
@@ -238,12 +223,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#4B5563',
     marginTop: 4,
-  },
-  emailText: {
-    fontSize: 14,
-    textAlign: "center",
-    color: "#4B5563",
-    marginBottom: 10,
   },
   summaryCard: {
     backgroundColor: '#ECFDF5',
