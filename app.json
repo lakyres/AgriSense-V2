@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "react_native_agrisense",
+    "name": "AgriSense",
     "slug": "react_native_agrisense",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,7 +15,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.lakyres.react_native_agrisense"
     },
     "web": {
       "bundler": "metro",

@@ -5,7 +5,7 @@ import { WebView } from 'react-native-webview';
 import icons from '@/constants/icons';
 import { useThemeContext } from '@/lib/ThemeProvider';
 
-export default function Explore() {
+export default function Scan() {
   const { isDarkMode } = useThemeContext();
   const [showLive, setShowLive] = useState(false); // toggle for stream visibility
 

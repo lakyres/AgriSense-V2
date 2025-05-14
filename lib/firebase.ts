@@ -1,20 +1,25 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
+import { getStorage } from "firebase/storage";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { getDatabase } from "firebase/database"; // ✅ Realtime DB
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBInwh0z9sgAkARlcVxIDK8IrUcgvzw9vE",
-  authDomain: "agrisense-24467.firebaseapp.com",
-  databaseURL: "https://agrisense-24467-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "agrisense-24467",
-  storageBucket: "agrisense-24467.firebasestorage.app",
-  messagingSenderId: "999179273743",
-  appId: "1:999179273743:web:601ffe36f4e0108553057a"
+  apiKey: "AIzaSyBeycnmrse8ZLV-D9zFBEQS3jL-rRMaKAw",
+  authDomain: "agrisense-6a089.firebaseapp.com",
+  databaseURL: "https://agrisense-6a089-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "agrisense-6a089",
+  storageBucket: "agrisense-6a089.firebasestorage.app",
+  messagingSenderId: "205438912985",
+  appId: "1:205438912985:web:3413fa85c0c1f5531bf1c8",
+  measurementId: "G-KV99XF08SZ"
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-export const db = getFirestore(app);           // Firestore
-export const auth = getAuth(app);              // Auth
-export const realtimeDb = getDatabase(app);    // ✅ Realtime DB
+export const auth = getAuth(app);
+
+export const storage = getStorage(app);
+export const db = getFirestore(app);
+export const realtimeDb = getDatabase(app);
