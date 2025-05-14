@@ -1,51 +1,68 @@
-# Welcome to your Expo app 👋
+# AgriSense
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**AgriSense** is a smart mobile application designed for hydroponic growers to monitor Pechay (Brassica rapa) growth and detect pest infestations using machine learning and computer vision. Integrated with Raspberry Pi for automated scanning, the app provides real-time insights to help optimize crop management in hydroponic greenhouses.
 
-## Get started
+---
 
-1. Install dependencies
+## Features
 
+- Predict Pechay growth stages: Seedling, Vegetative, Mature  
+- Detect pest infestations early through image analysis  
+- Real-time monitoring with Raspberry Pi integration  
+- User-friendly interface available on Android and iOS  
+- Cloud-based data storage for historical tracking and analytics
+
+---
+
+## Installation
+
+1. Clone the repository:  
+   ```bash
+   git clone https://github.com/yourusername/agrisense.git
+   cd agrisense
+
+2. Install dependencies:
    ```bash
    npm install
-   ```
 
-2. Start the app
+3. Configure Firebase credentials in `/lib/firebase.js` or `/lib/firebase.ts` (depending on your setup).
 
+4. Run the app (Android or iOS):
    ```bash
-    npx expo start
-   ```
+   npm run android
+   # or
+   npm run ios
 
-In the output, you'll find options to open the app in a
+## Usage
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- Connect the Raspberry Pi camera module for automatic plant scanning.  
+- Launch the app to view growth stage predictions and pest alerts.  
+- Review historical data and insights from the dashboard.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Technologies Used
 
-## Get a fresh project
+- React Native (Android & iOS)  
+- TensorFlow / Machine Learning models for image analysis  
+- Raspberry Pi for plant image capture  
+- Firebase (Storage and/or Realtime Database)  
+- JavaScript / TypeScript
 
-When you're ready, run:
+## Contributing
 
-```bash
-npm run reset-project
-```
+Contributions are welcome! Please fork the repository and submit pull requests.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Team
 
-## Learn more
+Developed by:  
+- Patrick Joseph R. Magbuhos — [patrickjosephmagbuhos@gmail.com](mailto:patrickjosephmagbuhos@gmail.com)  
+- Kyla N. Marjes — [kylamarjes11@gmail.com](mailto:kylamarjes11@gmail.com)  
+- Adrian A. Arcega — [adrianarcega18@gmail.com](mailto:adrianarcega18@gmail.com)  
+- Ma. Angelica P. Sevilla — [angelmaesevilla@gmail.com](mailto:angelmaesevilla@gmail.com)
 
-To learn more about developing your project with Expo, look at the following resources:
+## License
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+[Specify your license here, e.g., MIT License]
 
-## Join the community
+## Contact
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-# HarvGuard
+For inquiries or support, contact any of the team members listed above.
