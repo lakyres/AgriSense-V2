@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Text, View, Image, ScrollView, StyleSheet,
-  ActivityIndicator, TouchableOpacity, Linking
+  ActivityIndicator, TouchableOpacity, Linking, RefreshControl
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeContext } from "@/lib/ThemeProvider";
@@ -31,71 +31,90 @@ export interface Detection {
 export default function Home() {
   const [detection, setDetection] = useState<Detection | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // State for pull-to-refresh
   const { isDarkMode } = useThemeContext();
 
+  // Function to fetch the latest detection data from Firebase Storage
+  const fetchLatestDetection = async () => {
+    try {
+      const indexRef = storageRef(storage, "detections/detection_index.json");
+      const indexUrl = await getDownloadURL(indexRef);
+      const indexRes = await fetch(indexUrl);
+      const folderList: string[] = await indexRes.json();
+      const latestId = folderList.reverse()[0];
+
+      const rawRef = storageRef(storage, `detections/${latestId}/Raw.jpg`);
+      const detectedRef = storageRef(storage, `detections/${latestId}/Detected.jpg`);
+      const envRef = storageRef(storage, `detections/${latestId}/environment_data.json`);
+      const growthRef = storageRef(storage, `detections/${latestId}/growth_parameters.json`);
+
+      const growthUrl = await getDownloadURL(growthRef);
+      const [rawUrl, detectedUrl, envUrl] = await Promise.all([
+        getDownloadURL(rawRef),
+        getDownloadURL(detectedRef),
+        getDownloadURL(envRef),
+      ]);
+
+      const [envData, growthData] = await Promise.all([
+        fetch(envUrl).then((res) => res.json()),
+        fetch(growthUrl).then((res) => res.json()),
+      ]);
+
+      const leafData = growthData.leaf_data_per_box || [];
+      const firstPlant = leafData[0];
+
+      const latest: Detection = {
+        id: latestId,
+        raw_image_url: rawUrl,
+        detected_image_url: detectedUrl,
+        environment: {
+          air_temperature_c: envData.air_temperature_c,
+          water_temperature_c: envData.water_temperature_c,
+          humidity_percent: envData.humidity_percent,
+          light_intensity_lux: envData.light_intensity,
+        },
+        growth: {
+          plant_count: leafData.length,
+          growth_stage: firstPlant?.growth_stage || "N/A",
+          pest_detected: firstPlant?.pest_detected || "None",
+          height_cm: firstPlant?.height_cm || 0,
+          leaf_area_cm2: firstPlant?.largest_leaf_area || 0,
+          leaf_count: firstPlant?.leaf_count || 0,
+        },
+      };
+
+      setDetection(latest);
+    } catch (e) {
+      console.error("❌ Failed to fetch latest detection:", e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false); // Stop the refreshing animation
+    }
+  };
+
+  // Fetch the latest detection when the component mounts
   useEffect(() => {
-    const fetchLatestDetection = async () => {
-      try {
-        const indexRef = storageRef(storage, "detections/detection_index.json");
-        const indexUrl = await getDownloadURL(indexRef);
-        const indexRes = await fetch(indexUrl);
-        const folderList: string[] = await indexRes.json();
-        const latestId = folderList.reverse()[0];
-
-        const rawRef = storageRef(storage, `detections/${latestId}/Raw.jpg`);
-        const detectedRef = storageRef(storage, `detections/${latestId}/Detected.jpg`);
-        const envRef = storageRef(storage, `detections/${latestId}/environment_data.json`);
-        const growthRef = storageRef(storage, `detections/${latestId}/growth_parameters.json`);
-
-        const [rawUrl, detectedUrl, envUrl, growthUrl] = await Promise.all([
-          getDownloadURL(rawRef),
-          getDownloadURL(detectedRef),
-          getDownloadURL(envRef),
-          getDownloadURL(growthRef),
-        ]);
-
-        const [envData, growthData] = await Promise.all([
-          fetch(envUrl).then((res) => res.json()),
-          fetch(growthUrl).then((res) => res.json()),
-        ]);
-
-        const leafData = growthData.leaf_data_per_box || [];
-        const firstPlant = leafData[0];
-
-        const latest: Detection = {
-          id: latestId,
-          raw_image_url: rawUrl,
-          detected_image_url: detectedUrl,
-          environment: {
-            air_temperature_c: envData.air_temperature_c,
-            water_temperature_c: envData.water_temperature_c,
-            humidity_percent: envData.humidity_percent,
-            light_intensity_lux: envData.light_intensity,
-          },
-          growth: {
-            plant_count: leafData.length,
-            growth_stage: firstPlant?.growth_stage || "N/A",
-            pest_detected: firstPlant?.pest_detected || "None",
-            height_cm: firstPlant?.height_cm || 0,
-            leaf_area_cm2: firstPlant?.largest_leaf_area || 0,
-            leaf_count: firstPlant?.leaf_count || 0,
-          },
-        };
-
-        setDetection(latest);
-      } catch (e) {
-        console.error("❌ Failed to fetch latest detection:", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchLatestDetection();
-  }, []);
+  }, []);  // This will run only once when the component first mounts.
+
+  // Function to handle the pull-to-refresh action
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchLatestDetection();  // Fetch the latest detection again
+  };
 
   return (
     <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
+      <ScrollView 
+        contentContainerStyle={{ padding: 20 }} 
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}  // Trigger refresh when user pulls down
+            colors={[isDarkMode ? "#86efac" : "#16A34A"]}  // Set refresh control color
+          />
+        }
+      >
         <View style={{ marginBottom: 20, alignItems: 'center' }}>
           <Text style={[styles.header, isDarkMode && styles.textLight]}>
             How’s My Pechay?
@@ -274,4 +293,4 @@ const styles = StyleSheet.create({
   },
   textLight: { color: '#ffffff' },
   textMuted: { color: '#D1D5DB' },
-});
+}); 
