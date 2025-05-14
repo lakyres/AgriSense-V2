@@ -132,7 +132,11 @@ export default function HistoryScreen() {
   const textColor = isDarkMode ? '#D1D5DB' : '#065F46';
   const highlightColor = isDarkMode ? '#86efac' : '#15803D';
 
-  const selectedDateStr = selectedDate?.toISOString().split('T')[0];
+  // Use local date string (yyyy-mm-dd) to avoid timezone shift issues
+  const selectedDateStr = selectedDate
+    ? selectedDate.toLocaleDateString('sv-SE') // Format 'YYYY-MM-DD'
+    : null;
+
   const filteredDetections = detections.filter((item) => {
     const dateMatch = selectedDateStr ? item.id.includes(selectedDateStr) : true;
     const stageMatch = selectedStage === 'All' || item.growth.growth_stage === selectedStage;
