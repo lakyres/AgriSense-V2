@@ -32,6 +32,8 @@ export const getDetections = async (): Promise<Detection[]> => {
     const indexRef = storageRef(storage, "detections/detection_index.json");
     const indexUrl = await getDownloadURL(indexRef);
     const indexRes = await fetch(indexUrl);
+
+    // ✅ Updated: directly parse the plain array
     const folderList: string[] = await indexRes.json();
 
     console.log("🗂️ Folder list from index:", folderList);

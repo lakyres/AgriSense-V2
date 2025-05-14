@@ -4,12 +4,32 @@ import {
   ActivityIndicator, TouchableOpacity, Linking
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getDetections, Detection } from "@/utils/getDetections";
 import { useThemeContext } from "@/lib/ThemeProvider";
-import { auth } from "@/lib/firebase";
+import { auth, storage } from "@/lib/firebase";
+import { getDownloadURL, ref as storageRef } from "firebase/storage";
+
+export interface Detection {
+  id: string;
+  raw_image_url: string;
+  detected_image_url: string;
+  environment: {
+    air_temperature_c: number;
+    water_temperature_c: number;
+    humidity_percent: number;
+    light_intensity_lux: number;
+  };
+  growth: {
+    plant_count: number;
+    growth_stage: string;
+    pest_detected: string;
+    height_cm: number;
+    leaf_area_cm2: number;
+    leaf_count: number;
+  };
+}
 
 export default function Home() {
-  const [detections, setDetections] = useState<Detection[]>([]);
+  const [detection, setDetection] = useState<Detection | null>(null);
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const { isDarkMode } = useThemeContext();
@@ -23,17 +43,63 @@ export default function Home() {
       console.warn("❌ No user signed in.");
     }
 
-    const fetch = async () => {
+    const fetchLatestDetection = async () => {
       try {
-        const data = await getDetections();
-        setDetections(data);
+        const indexRef = storageRef(storage, "detections/detection_index.json");
+        const indexUrl = await getDownloadURL(indexRef);
+        const indexRes = await fetch(indexUrl);
+        const folderList: string[] = await indexRes.json();
+        const latestId = folderList.reverse()[0];
+
+        const rawRef = storageRef(storage, `detections/${latestId}/Raw.jpg`);
+        const detectedRef = storageRef(storage, `detections/${latestId}/Detected.jpg`);
+        const envRef = storageRef(storage, `detections/${latestId}/environment_data.json`);
+        const growthRef = storageRef(storage, `detections/${latestId}/growth_parameters.json`);
+
+        const [rawUrl, detectedUrl, envUrl, growthUrl] = await Promise.all([
+          getDownloadURL(rawRef),
+          getDownloadURL(detectedRef),
+          getDownloadURL(envRef),
+          getDownloadURL(growthRef),
+        ]);
+
+        const [envData, growthData] = await Promise.all([
+          fetch(envUrl).then((res) => res.json()),
+          fetch(growthUrl).then((res) => res.json()),
+        ]);
+
+        const leafData = growthData.leaf_data_per_box || [];
+        const firstPlant = leafData[0];
+
+        const latest: Detection = {
+          id: latestId,
+          raw_image_url: rawUrl,
+          detected_image_url: detectedUrl,
+          environment: {
+            air_temperature_c: envData.air_temperature_c,
+            water_temperature_c: envData.water_temperature_c,
+            humidity_percent: envData.humidity_percent,
+            light_intensity_lux: envData.light_intensity,
+          },
+          growth: {
+            plant_count: leafData.length,
+            growth_stage: firstPlant?.growth_stage || "N/A",
+            pest_detected: firstPlant?.pest_detected || "None",
+            height_cm: firstPlant?.height_cm || 0,
+            leaf_area_cm2: firstPlant?.largest_leaf_area || 0,
+            leaf_count: firstPlant?.leaf_count || 0,
+          },
+        };
+
+        setDetection(latest);
       } catch (e) {
-        console.error("❌ Error fetching detections:", e);
+        console.error("❌ Failed to fetch latest detection:", e);
       } finally {
         setLoading(false);
       }
     };
-    fetch();
+
+    fetchLatestDetection();
   }, []);
 
   return (
@@ -45,24 +111,21 @@ export default function Home() {
           </Text>
         )}
 
-        {/* Updated title + emoji subtitle */}
         <View style={{ marginBottom: 20, alignItems: 'center' }}>
           <Text style={[styles.header, isDarkMode && styles.textLight]}>
             How’s My Pechay?
           </Text>
 
-          {detections.length > 0 ? (
-            <>
-              {detections[0].growth.pest_detected && detections[0].growth.pest_detected !== "None" ? (
-                <Text style={[styles.subtitle, isDarkMode && styles.textMuted]}>
-                  ⚠️ Pest detected — keep an eye out!
-                </Text>
-              ) : (
-                <Text style={[styles.subtitle, isDarkMode && styles.textMuted]}>
-                  ✅ Looks healthy today!
-                </Text>
-              )}
-            </>
+          {detection ? (
+            detection.growth.pest_detected !== "None" ? (
+              <Text style={[styles.subtitle, isDarkMode && styles.textMuted]}>
+                ⚠️ Pest detected — keep an eye out!
+              </Text>
+            ) : (
+              <Text style={[styles.subtitle, isDarkMode && styles.textMuted]}>
+                ✅ Looks healthy today!
+              </Text>
+            )
           ) : (
             <Text style={[styles.subtitle, isDarkMode && styles.textMuted]}>
               📡 Waiting for scan results...
@@ -70,111 +133,90 @@ export default function Home() {
           )}
         </View>
 
-        {detections.length > 0 && (
+        {detection && (
           <>
-            {/* Latest Scan Summary */}
             <View style={[styles.summaryCard, isDarkMode && styles.cardDark]}>
               <Text style={[styles.sectionTitle, { color: isDarkMode ? '#86efac' : '#15803D' }]}>
                 ✅ Latest Scan Summary
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
-                Growth Stage: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detections[0].growth.growth_stage}</Text>
+                Growth Stage: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.growth.growth_stage}</Text>
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
-                Pest Detected: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detections[0].growth.pest_detected}</Text>
+                Pest Detected: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.growth.pest_detected}</Text>
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
                 Moisture Level: <Text style={[styles.value, isDarkMode && styles.textLight]}>
-                  {detections[0].environment.humidity_percent >= 60 ? 'Good' : 'Low'}
+                  {detection.environment.humidity_percent >= 60 ? 'Good' : 'Low'}
                 </Text>
               </Text>
             </View>
 
-            {/* Real-Time Stats */}
             <View style={[styles.summaryCard, isDarkMode && styles.cardDark]}>
               <Text style={[styles.sectionTitle, { color: isDarkMode ? '#86efac' : '#15803D' }]}>
                 📊 Real-time Stats
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
-                Plant Count: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detections[0].growth.plant_count}</Text>
+                Plant Count: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.growth.plant_count}</Text>
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
                 Healthy: <Text style={[styles.value, isDarkMode && styles.textLight]}>
-                  {
-                    detections[0].growth.plant_count -
-                    (detections[0].growth.pest_detected && detections[0].growth.pest_detected !== "None" ? 1 : 0)
-                  }
+                  {detection.growth.plant_count - (detection.growth.pest_detected !== "None" ? 1 : 0)}
                 </Text>
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
                 Pest-Detected: <Text style={[styles.value, isDarkMode && styles.textLight]}>
-                  {detections[0].growth.pest_detected && detections[0].growth.pest_detected !== "None" ? 1 : 0}
+                  {detection.growth.pest_detected !== "None" ? 1 : 0}
                 </Text>
               </Text>
             </View>
-          </>
-        )}
 
-        {loading ? (
-          <ActivityIndicator size="large" color={isDarkMode ? "#86efac" : "#16A34A"} />
-        ) : detections.length === 0 ? (
-          <Text style={[styles.noData, isDarkMode && styles.textMuted]}>
-            No detections found.
-          </Text>
-        ) : (
-          detections.map((item) => (
-            <View key={item.id} style={[styles.card, isDarkMode && styles.cardDark]}>
+            <View style={[styles.card, isDarkMode && styles.cardDark]}>
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.label, isDarkMode && styles.textMuted, { marginBottom: 4 }]}>Raw</Text>
-                  <Image source={{ uri: item.raw_image_url }} style={styles.image} />
+                  <Image source={{ uri: detection.raw_image_url }} style={styles.image} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.label, isDarkMode && styles.textMuted, { marginBottom: 4 }]}>Detected</Text>
-                  <Image source={{ uri: item.detected_image_url }} style={styles.image} />
+                  <Image source={{ uri: detection.detected_image_url }} style={styles.image} />
                 </View>
               </View>
 
-              <Text style={[styles.timestamp, isDarkMode && styles.textMuted]}>{item.id}</Text>
-
+              <Text style={[styles.timestamp, isDarkMode && styles.textMuted]}>{detection.id}</Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
-                Plant Count: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.growth.plant_count}</Text>
+                Height: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.growth.height_cm} cm</Text>
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
-                Growth Stage: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.growth.growth_stage}</Text>
+                Leaf Area: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.growth.leaf_area_cm2} cm²</Text>
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
-                Pest: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.growth.pest_detected}</Text>
+                Leaf Count: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.growth.leaf_count}</Text>
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
-                Height: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.growth.height_cm} cm</Text>
+                Temp: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.environment.air_temperature_c}°C</Text>
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
-                Leaf Area: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.growth.leaf_area_cm2} cm²</Text>
+                Humidity: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.environment.humidity_percent}%</Text>
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
-                Leaf Count: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.growth.leaf_count}</Text>
+                Light: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.environment.light_intensity_lux} lux</Text>
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
-                Temp: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.environment.air_temperature_c}°C</Text>
-              </Text>
-              <Text style={[styles.label, isDarkMode && styles.textMuted]}>
-                Humidity: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.environment.humidity_percent}%</Text>
-              </Text>
-              <Text style={[styles.label, isDarkMode && styles.textMuted]}>
-                Light: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.environment.light_intensity_lux} lux</Text>
-              </Text>
-              <Text style={[styles.label, isDarkMode && styles.textMuted]}>
-                Water Temp: <Text style={[styles.value, isDarkMode && styles.textLight]}>{item.environment.water_temperature_c}°C</Text>
+                Water Temp: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.environment.water_temperature_c}°C</Text>
               </Text>
 
-              <TouchableOpacity onPress={() => Linking.openURL(item.detected_image_url)}>
+              <TouchableOpacity onPress={() => Linking.openURL(detection.detected_image_url)}>
                 <Text style={{ color: isDarkMode ? "#86efac" : "#15803D", fontWeight: "bold", marginTop: 10 }}>
                   Download Detected Image
                 </Text>
               </TouchableOpacity>
             </View>
-          ))
+          </>
+        )}
+
+        {loading && (
+          <ActivityIndicator size="large" color={isDarkMode ? "#86efac" : "#16A34A"} />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -182,13 +224,8 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  containerDark: {
-    backgroundColor: '#1f2937',
-  },
+  container: { flex: 1, backgroundColor: 'white' },
+  containerDark: { backgroundColor: '#1f2937' },
   header: {
     fontSize: 22,
     fontWeight: 'bold',
@@ -256,15 +293,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#064E3B',
   },
-  noData: {
-    textAlign: 'center',
-    color: '#9CA3AF',
-    marginTop: 40,
-  },
-  textLight: {
-    color: '#ffffff',
-  },
-  textMuted: {
-    color: '#D1D5DB',
-  },
+  textLight: { color: '#ffffff' },
+  textMuted: { color: '#D1D5DB' },
 });

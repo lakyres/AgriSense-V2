@@ -81,7 +81,7 @@ export default function TabsLayout() {
           title: "History",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} icon={icons.search} title="History" isDarkMode={isDarkMode} />
+            <TabIcon focused={focused} icon={icons.calendar} title="History" isDarkMode={isDarkMode} />
           ),
         }}
       />
@@ -101,7 +101,7 @@ export default function TabsLayout() {
           title: "About",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} icon={icons.search} title="About" isDarkMode={isDarkMode} />
+            <TabIcon focused={focused} icon={icons.person} title="About" isDarkMode={isDarkMode} />
           ),
         }}
       />
@@ -111,7 +111,7 @@ export default function TabsLayout() {
           title: "Settings",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} icon={icons.person} title="Settings" isDarkMode={isDarkMode} />
+            <TabIcon focused={focused} icon={icons.settings} title="Settings" isDarkMode={isDarkMode} />
           ),
         }}
       />
