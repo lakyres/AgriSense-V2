@@ -100,18 +100,53 @@ export default function Home() {
     }
   };
 
-  // Check light intensity and return alert message if needed
+  // Check alert conditions and return combined message or null
   const checkAlertCondition = (latest: Detection) => {
-    if (latest.environment.light_intensity_lux < 100) {
-      return `Warning: Low light detected (${latest.environment.light_intensity_lux.toFixed(1)} lux)`;
+    const alerts = [];
+
+    // Light intensity check
+    if (latest.environment.light_intensity_lux < 500) {
+      alerts.push(`Warning: Low light detected (${latest.environment.light_intensity_lux.toFixed(1)} lux)`);
+    } else if (latest.environment.light_intensity_lux > 10000) {
+      alerts.push(`Warning: High light detected (${latest.environment.light_intensity_lux.toFixed(1)} lux)`);
     }
-    if (latest.environment.light_intensity_lux > 1000) {
-      return `Warning: High light detected (${latest.environment.light_intensity_lux.toFixed(1)} lux)`;
+
+    // Pest detection check
+    if (latest.growth.pest_detected !== "None") {
+      alerts.push(`Alert: Pest detected - ${latest.growth.pest_detected}`);
     }
-    return null;
+
+    // Mature growth stage check
+    if (latest.growth.growth_stage.toLowerCase() === "mature") {
+      alerts.push(`Info: Plant has reached mature stage`);
+    }
+
+    // Air temperature check
+    if (latest.environment.air_temperature_c < 15) {
+      alerts.push(`Warning: Low air temperature (${latest.environment.air_temperature_c.toFixed(1)}°C)`);
+    } else if (latest.environment.air_temperature_c > 35) {
+      alerts.push(`Warning: High air temperature (${latest.environment.air_temperature_c.toFixed(1)}°C)`);
+    }
+
+    // Water temperature check
+    if (latest.environment.water_temperature_c < 15) {
+      alerts.push(`Warning: Low water temperature (${latest.environment.water_temperature_c.toFixed(1)}°C)`);
+    } else if (latest.environment.water_temperature_c > 30) {
+      alerts.push(`Warning: High water temperature (${latest.environment.water_temperature_c.toFixed(1)}°C)`);
+    }
+
+    // Humidity check
+    if (latest.environment.humidity_percent < 40) {
+      alerts.push(`Warning: Low humidity (${latest.environment.humidity_percent.toFixed(1)}%)`);
+    } else if (latest.environment.humidity_percent > 80) {
+      alerts.push(`Warning: High humidity (${latest.environment.humidity_percent.toFixed(1)}%)`);
+    }
+
+    if (alerts.length === 0) return null;
+    return alerts.join("\n");
   };
 
-  // Fetch latest detection and set states
+  // Fetch latest detection and update states + alert
   const fetchAndUpdate = async () => {
     setLoading(true);
     const latest = await fetchLatestDetection();
@@ -133,12 +168,12 @@ export default function Home() {
     setLoading(false);
   };
 
-  // Fetch on mount
+  // On component mount fetch data once
   useEffect(() => {
     fetchAndUpdate();
   }, []);
 
-  // Pull-to-refresh handler
+  // Pull to refresh handler
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchAndUpdate();
