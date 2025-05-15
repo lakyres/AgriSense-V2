@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   Text, View, Image, ScrollView, StyleSheet,
   ActivityIndicator, TouchableOpacity, Linking, RefreshControl,
-  Modal, Button
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeContext } from "@/lib/ThemeProvider";
@@ -32,19 +32,22 @@ export interface Detection {
 export default function Home() {
   const [detection, setDetection] = useState<Detection | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false); // State for pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
   const { isDarkMode } = useThemeContext();
 
-  // Modal alert states
-  const [modalVisible, setModalVisible] = useState(false);
+  // Modal alert states for alerts
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
+
+  // Modal for detected image tap details
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalData, setModalData] = useState<Detection | null>(null);
 
   // Track last detection ID to avoid repeated alerts
   const lastDetectionId = useRef<string | null>(null);
 
   const CACHE_BUSTER = `?t=${Date.now()}`;
 
-  // Function to fetch the latest detection data from Firebase Storage
   const fetchLatestDetection = async () => {
     try {
       const indexRef = storageRef(storage, "detections/detection_index.json");
@@ -100,42 +103,35 @@ export default function Home() {
     }
   };
 
-  // Check alert conditions and return combined message or null
   const checkAlertCondition = (latest: Detection) => {
     const alerts = [];
 
-    // Light intensity check
     if (latest.environment.light_intensity_lux < 500) {
       alerts.push(`Warning: Low light detected (${latest.environment.light_intensity_lux.toFixed(1)} lux)`);
     } else if (latest.environment.light_intensity_lux > 10000) {
       alerts.push(`Warning: High light detected (${latest.environment.light_intensity_lux.toFixed(1)} lux)`);
     }
 
-    // Pest detection check
     if (latest.growth.pest_detected !== "None") {
       alerts.push(`Alert: Pest detected - ${latest.growth.pest_detected}`);
     }
 
-    // Mature growth stage check
     if (latest.growth.growth_stage.toLowerCase() === "mature") {
       alerts.push(`Info: Plant has reached mature stage`);
     }
 
-    // Air temperature check
     if (latest.environment.air_temperature_c < 15) {
       alerts.push(`Warning: Low air temperature (${latest.environment.air_temperature_c.toFixed(1)}°C)`);
     } else if (latest.environment.air_temperature_c > 35) {
       alerts.push(`Warning: High air temperature (${latest.environment.air_temperature_c.toFixed(1)}°C)`);
     }
 
-    // Water temperature check
     if (latest.environment.water_temperature_c < 15) {
       alerts.push(`Warning: Low water temperature (${latest.environment.water_temperature_c.toFixed(1)}°C)`);
     } else if (latest.environment.water_temperature_c > 30) {
       alerts.push(`Warning: High water temperature (${latest.environment.water_temperature_c.toFixed(1)}°C)`);
     }
 
-    // Humidity check
     if (latest.environment.humidity_percent < 40) {
       alerts.push(`Warning: Low humidity (${latest.environment.humidity_percent.toFixed(1)}%)`);
     } else if (latest.environment.humidity_percent > 80) {
@@ -146,7 +142,6 @@ export default function Home() {
     return alerts.join("\n");
   };
 
-  // Fetch latest detection and update states + alert
   const fetchAndUpdate = async () => {
     setLoading(true);
     const latest = await fetchLatestDetection();
@@ -158,26 +153,32 @@ export default function Home() {
         const alert = checkAlertCondition(latest);
         if (alert) {
           setAlertMessage(alert);
-          setModalVisible(true);
+          setAlertModalVisible(true);
         } else {
           setAlertMessage(null);
-          setModalVisible(false);
+          setAlertModalVisible(false);
         }
       }
     }
     setLoading(false);
   };
 
-  // On component mount fetch data once
   useEffect(() => {
     fetchAndUpdate();
   }, []);
 
-  // Pull to refresh handler
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchAndUpdate();
     setRefreshing(false);
+  };
+
+  // Open modal on detected image tap
+  const openModal = () => {
+    if (detection) {
+      setModalData(detection);
+      setModalVisible(true);
+    }
   };
 
   return (
@@ -260,7 +261,9 @@ export default function Home() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.label, isDarkMode && styles.textMuted, { marginBottom: 4 }]}>Detected</Text>
-                  <Image source={{ uri: detection.detected_image_url }} style={styles.image} />
+                  <TouchableOpacity onPress={openModal}>
+                    <Image source={{ uri: detection.detected_image_url }} style={styles.image} />
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -303,16 +306,80 @@ export default function Home() {
 
       {/* Modal Alert */}
       <Modal
-        visible={modalVisible}
+        visible={alertModalVisible}
         transparent
         animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={() => setAlertModalVisible(false)}
       >
         <View style={styles.centeredView}>
           <View style={styles.modalView}>
             <Text style={{ marginBottom: 12 }}>{alertMessage}</Text>
-            <Button title="Close" onPress={() => setModalVisible(false)} />
+            <TouchableOpacity onPress={() => setAlertModalVisible(false)} style={styles.closeButton}>
+              <Text style={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>Close</Text>
+            </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* Modal for detected image details */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <ScrollView contentContainerStyle={styles.modalContent}>
+            <Text style={styles.modalLabel}>
+              Raw Image
+            </Text>
+            <Image
+              source={{ uri: modalData?.raw_image_url }}
+              style={styles.modalImage}
+            />
+
+            <Text style={styles.modalLabel}>
+              Detected Image
+            </Text>
+            <Image
+              source={{ uri: modalData?.detected_image_url }}
+              style={styles.modalImage}
+            />
+            <Text style={styles.modalText}>
+              🐛 Pest Detected: {modalData?.growth.pest_detected || "None"}
+            </Text>
+            <Text style={styles.modalText}>
+              🌱 Growth Stage: {modalData?.growth.growth_stage || "N/A"}
+            </Text>
+            <Text style={styles.modalText}>
+              📏 Height: {modalData?.growth.height_cm} cm
+            </Text>
+            <Text style={styles.modalText}>
+              🍃 Leaf Area: {modalData?.growth.leaf_area_cm2} cm²
+            </Text>
+            <Text style={styles.modalText}>
+              🌿 Leaf Count: {modalData?.growth.leaf_count}
+            </Text>
+            <Text style={styles.modalText}>
+              🌡 Air Temp: {modalData?.environment.air_temperature_c}°C
+            </Text>
+            <Text style={styles.modalText}>
+              💧 Humidity: {modalData?.environment.humidity_percent}%
+            </Text>
+            <Text style={styles.modalText}>
+              💡 Light: {modalData?.environment.light_intensity_lux} lux
+            </Text>
+            <Text style={styles.modalText}>
+              🌊 Water Temp: {modalData?.environment.water_temperature_c}°C
+            </Text>
+
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>Close</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
       </Modal>
     </SafeAreaView>
@@ -396,5 +463,41 @@ const styles = StyleSheet.create({
     padding: 25,
     borderRadius: 8,
     elevation: 5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    alignItems: 'center',
+  },
+  modalImage: {
+    width: '100%',
+    height: 250,
+    resizeMode: 'contain',
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+  modalText: {
+    fontSize: 16,
+    marginTop: 4,
+    color: '#ffffff',  // Changed to white
+  },
+  modalLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 6,
+    marginTop: 10,
+    color: '#ffffff', // Changed to white
+  },
+  closeButton: {
+    marginTop: 20,
+    backgroundColor: '#15803D',
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+    borderRadius: 12,
+    alignItems: 'center',
   },
 });
