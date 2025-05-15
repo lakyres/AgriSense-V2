@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Text, View, Image, ScrollView, StyleSheet,
-  ActivityIndicator, TouchableOpacity, Linking, RefreshControl
+  ActivityIndicator, TouchableOpacity, Linking, RefreshControl,
+  Modal, Button
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeContext } from "@/lib/ThemeProvider";
@@ -34,21 +35,30 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false); // State for pull-to-refresh
   const { isDarkMode } = useThemeContext();
 
+  // Modal alert states
+  const [modalVisible, setModalVisible] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+
+  // Track last detection ID to avoid repeated alerts
+  const lastDetectionId = useRef<string | null>(null);
+
+  const CACHE_BUSTER = `?t=${Date.now()}`;
+
   // Function to fetch the latest detection data from Firebase Storage
   const fetchLatestDetection = async () => {
     try {
       const indexRef = storageRef(storage, "detections/detection_index.json");
       const indexUrl = await getDownloadURL(indexRef);
-      const indexRes = await fetch(indexUrl);
+      const indexRes = await fetch(indexUrl + CACHE_BUSTER);
       const folderList: string[] = await indexRes.json();
-      const latestId = folderList.reverse()[0];
+      const latestId = folderList[folderList.length - 1].trim();
 
       const rawRef = storageRef(storage, `detections/${latestId}/Raw.jpg`);
       const detectedRef = storageRef(storage, `detections/${latestId}/Detected.jpg`);
       const envRef = storageRef(storage, `detections/${latestId}/environment_data.json`);
       const growthRef = storageRef(storage, `detections/${latestId}/growth_parameters.json`);
 
-      const growthUrl = await getDownloadURL(growthRef);
+      const growthUrl = (await getDownloadURL(growthRef)) + CACHE_BUSTER;
       const [rawUrl, detectedUrl, envUrl] = await Promise.all([
         getDownloadURL(rawRef),
         getDownloadURL(detectedRef),
@@ -83,35 +93,67 @@ export default function Home() {
         },
       };
 
-      setDetection(latest);
+      return latest;
     } catch (e) {
       console.error("❌ Failed to fetch latest detection:", e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false); // Stop the refreshing animation
+      return null;
     }
   };
 
-  // Fetch the latest detection when the component mounts
-  useEffect(() => {
-    fetchLatestDetection();
-  }, []);  // This will run only once when the component first mounts.
+  // Check light intensity and return alert message if needed
+  const checkAlertCondition = (latest: Detection) => {
+    if (latest.environment.light_intensity_lux < 100) {
+      return `Warning: Low light detected (${latest.environment.light_intensity_lux.toFixed(1)} lux)`;
+    }
+    if (latest.environment.light_intensity_lux > 1000) {
+      return `Warning: High light detected (${latest.environment.light_intensity_lux.toFixed(1)} lux)`;
+    }
+    return null;
+  };
 
-  // Function to handle the pull-to-refresh action
-  const onRefresh = () => {
+  // Fetch latest detection and set states
+  const fetchAndUpdate = async () => {
+    setLoading(true);
+    const latest = await fetchLatestDetection();
+    if (latest) {
+      setDetection(latest);
+
+      if (lastDetectionId.current !== latest.id) {
+        lastDetectionId.current = latest.id;
+        const alert = checkAlertCondition(latest);
+        if (alert) {
+          setAlertMessage(alert);
+          setModalVisible(true);
+        } else {
+          setAlertMessage(null);
+          setModalVisible(false);
+        }
+      }
+    }
+    setLoading(false);
+  };
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchAndUpdate();
+  }, []);
+
+  // Pull-to-refresh handler
+  const onRefresh = async () => {
     setRefreshing(true);
-    fetchLatestDetection();  // Fetch the latest detection again
+    await fetchAndUpdate();
+    setRefreshing(false);
   };
 
   return (
     <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
-      <ScrollView 
-        contentContainerStyle={{ padding: 20 }} 
+      <ScrollView
+        contentContainerStyle={{ padding: 20 }}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh}  // Trigger refresh when user pulls down
-            colors={[isDarkMode ? "#86efac" : "#16A34A"]}  // Set refresh control color
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[isDarkMode ? "#86efac" : "#16A34A"]}
           />
         }
       >
@@ -223,6 +265,21 @@ export default function Home() {
           <ActivityIndicator size="large" color={isDarkMode ? "#86efac" : "#16A34A"} />
         )}
       </ScrollView>
+
+      {/* Modal Alert */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <Text style={{ marginBottom: 12 }}>{alertMessage}</Text>
+            <Button title="Close" onPress={() => setModalVisible(false)} />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -293,4 +350,16 @@ const styles = StyleSheet.create({
   },
   textLight: { color: '#ffffff' },
   textMuted: { color: '#D1D5DB' },
-}); 
+  centeredView: {
+    flex: 1,
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: "white",
+    padding: 25,
+    borderRadius: 8,
+    elevation: 5,
+  },
+});
