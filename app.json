@@ -28,6 +28,9 @@
         "unstable_settings": {
           "typedRoutes": true
         }
+      },
+      "eas": {
+        "projectId": "35a9ec67-c8d8-40f3-a104-c53fd681405f"
       }
     },
     "plugins": [
