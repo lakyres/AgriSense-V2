@@ -101,7 +101,7 @@ export default function TabsLayout() {
           title: "About",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} icon={icons.person} title="About" isDarkMode={isDarkMode} />
+            <TabIcon focused={focused} icon={icons.people} title="About" isDarkMode={isDarkMode} />
           ),
         }}
       />

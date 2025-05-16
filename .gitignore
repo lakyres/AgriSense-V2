@@ -1,38 +1,62 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# Node.js dependencies
 node_modules/
 
-# Expo
+# Yarn lock file (keep in Git, but don't upload for builds if unnecessary)
+yarn-error.log
+npm-debug.log*
+yarn-debug.log*
+
+# Expo & Metro caches
 .expo/
-dist/
-web-build/
-expo-env.d.ts
+.expo-shared/
+.expo-cache/
+.cache/
+metro.config.js
 
-# Native
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
+# TypeScript
 *.tsbuildinfo
 
-app-example
+# Build output folders
+dist/
+build/
+android/
+ios/
+
+# Firebase & environment config
+.env
+.env.local
+.firebase/
+.firebase-debug.log
+.firebaserc
+
+# Logs
+*.log
+*.tmp
+expo-error.log
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Web build (if using Expo Web)
+web-build/
+
+# Expo generated
+expo-env.d.ts
+image.d.ts
+nativewind-env.d.ts
+
+# Optional: ignore test mocks or generated data if applicable
+__tests__/
+mock_data/
+coverage/
+
+# Functions (optional, if deployed separately via Firebase)
+functions/node_modules/
+functions/.env
+functions/.env.local

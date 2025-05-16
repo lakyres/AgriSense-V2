@@ -3,9 +3,6 @@
     "version": ">= 16.1.0",
     "appVersionSource": "remote"
   },
-  "hooks": {
-    "preinstall": "npm install --legacy-peer-deps"
-  },
   "build": {
     "development": {
       "developmentClient": true,
