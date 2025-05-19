@@ -3,16 +3,20 @@ import { Image, Text, View, ImageSourcePropType } from "react-native";
 import icons from "@/constants/icons";
 import { useThemeContext } from "@/lib/ThemeProvider";
 
-const TabIcon = ({
-  focused,
-  icon,
-  title,
-  isDarkMode,
-}: {
+import React from "react";
+
+type TabIconProps = {
   focused: boolean;
   icon: ImageSourcePropType;
   title: string;
   isDarkMode: boolean;
+};
+
+const TabIcon: React.FC<TabIconProps> = ({
+  focused,
+  icon,
+  title,
+  isDarkMode,
 }) => (
   <View
     style={{
