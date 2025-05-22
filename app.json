@@ -16,7 +16,10 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.lakyres.react_native_agrisense"
+      "package": "com.lakyres.react_native_agrisense",
+      "compileSdkVersion": 33,
+      "targetSdkVersion": 33,
+      "buildToolsVersion": "33.0.0"
     },
     "web": {
       "bundler": "metro",

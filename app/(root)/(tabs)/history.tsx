@@ -9,8 +9,6 @@ import {
   TouchableWithoutFeedback,
   Modal,
   Platform,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
@@ -18,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemeContext } from '@/lib/ThemeProvider';
 import { getDownloadURL, ref as storageRef } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
+import { parse, format, addDays, differenceInCalendarDays } from 'date-fns';
 
 export interface Detection {
   id: string;
@@ -42,14 +41,25 @@ export interface Detection {
 export default function HistoryScreen() {
   const { isDarkMode } = useThemeContext();
   const [allIds, setAllIds] = useState<string[]>([]);
-  const [detections, setDetections] = useState<Detection[]>([]);
+  const [detections, setDetections] = useState<(Detection & {
+    transition?: string;
+    transitionColor?: string;
+    pestTransition?: string;
+    pestTransitionColor?: string;
+    daysRemaining?: number;
+    estimatedMaturityDate?: string;
+  })[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalData, setModalData] = useState<Detection | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedStage, setSelectedStage] = useState<string>('All');
+  const [selectedPestFilter, setSelectedPestFilter] = useState<'All' | 'Pest' | 'None'>('All');
   const [showPicker, setShowPicker] = useState(false);
   const [visibleImages, setVisibleImages] = useState<Record<string, boolean>>({});
+
+  const stageOrder: Record<string, number> = { Seedling: 1, Vegetative: 2, Mature: 3 };
+  const stageDurations = { Seedling: 5, Vegetative: 10, Mature: 0 };
 
   useEffect(() => {
     const loadDetections = async () => {
@@ -108,7 +118,78 @@ export default function HistoryScreen() {
           }
         }
 
-        setDetections(fetchedDetections);
+        const validStages = ['Seedling', 'Vegetative', 'Mature'];
+
+        let previousStage: string | null = null;
+        let previousPest: string | null = null;
+        let lastValidStage: string | null = null;
+
+        const detectionsWithTransitions = fetchedDetections.map((det) => {
+          let currentStage = det.growth.growth_stage;
+          const currentPest = det.growth.pest_detected;
+
+          // Replace invalid or "N/A" stage with last valid stage
+          if (!validStages.includes(currentStage)) {
+            if (lastValidStage) {
+              currentStage = lastValidStage;
+            }
+          } else {
+            lastValidStage = currentStage;
+          }
+
+          let transition: string | undefined;
+          let transitionColor: string | undefined;
+          if (previousStage && currentStage !== previousStage) {
+            transition = `🌀 Transitioned from ${previousStage} to ${currentStage}`;
+            const from = stageOrder[previousStage] ?? 0;
+            const to = stageOrder[currentStage] ?? 0;
+            transitionColor = to > from ? '#22c55e' : '#ef4444';
+          }
+          previousStage = currentStage;
+
+          let pestTransition: string | undefined;
+          let pestTransitionColor: string | undefined;
+          if (
+            previousPest &&
+            currentPest !== previousPest &&
+            !(previousPest.toLowerCase() === 'none' && currentPest.toLowerCase() === 'none')
+          ) {
+            pestTransition = `🐛 Pest changed: ${previousPest} → ${currentPest}`;
+            pestTransitionColor = currentPest.toLowerCase() === 'none' ? '#22c55e' : '#f59e0b';
+          }
+          previousPest = currentPest;
+
+          let daysRemaining: number | undefined;
+          let estimatedMaturityDate: string | undefined;
+
+          const [datePart] = det.id.split('_');
+          const detectionDate = parse(datePart, 'yyyy-MM-dd', new Date());
+
+          const stageDuration = stageDurations[currentStage as keyof typeof stageDurations];
+          if (stageDuration !== undefined && stageDuration > 0) {
+            const estimatedDate = addDays(detectionDate, stageDuration);
+            let diff = differenceInCalendarDays(estimatedDate, new Date());
+            if (diff < 0) diff = 0;
+            daysRemaining = diff;
+            estimatedMaturityDate = format(estimatedDate, 'MMMM d, yyyy');
+          }
+
+          return {
+            ...det,
+            growth: {
+              ...det.growth,
+              growth_stage: currentStage,
+            },
+            transition,
+            transitionColor,
+            pestTransition,
+            pestTransitionColor,
+            daysRemaining,
+            estimatedMaturityDate,
+          };
+        });
+
+        setDetections(detectionsWithTransitions);
       } catch (err) {
         console.error('❌ Failed to load detection index:', err);
       } finally {
@@ -132,15 +213,34 @@ export default function HistoryScreen() {
   const textColor = isDarkMode ? '#D1D5DB' : '#065F46';
   const highlightColor = isDarkMode ? '#86efac' : '#15803D';
 
-  // Use local date string (yyyy-mm-dd) to avoid timezone shift issues
+  const formatIdToDateTime = (id: string) => {
+    const [datePart, timePart] = id.split('_');
+    const parsedDate = parse(datePart, 'yyyy-MM-dd', new Date());
+    const formattedDate = format(parsedDate, 'MMMM d, yyyy');
+    const formattedTime = timePart ? timePart.replace(/-/g, ':') : '';
+    return { formattedDate, formattedTime };
+  };
+
   const selectedDateStr = selectedDate
-    ? selectedDate.toLocaleDateString('sv-SE') // Format 'YYYY-MM-DD'
+    ? selectedDate.toLocaleDateString('sv-SE')
     : null;
 
   const filteredDetections = detections.filter((item) => {
     const dateMatch = selectedDateStr ? item.id.includes(selectedDateStr) : true;
     const stageMatch = selectedStage === 'All' || item.growth.growth_stage === selectedStage;
-    return dateMatch && stageMatch;
+
+    let pestMatch = true;
+    if (selectedPestFilter === 'Pest') {
+      pestMatch =
+        typeof item.growth.pest_detected === 'string' &&
+        item.growth.pest_detected.toLowerCase() !== 'none';
+    } else if (selectedPestFilter === 'None') {
+      pestMatch =
+        typeof item.growth.pest_detected === 'string' &&
+        item.growth.pest_detected.toLowerCase() === 'none';
+    }
+
+    return dateMatch && stageMatch && pestMatch;
   });
 
   return (
@@ -182,32 +282,92 @@ export default function HistoryScreen() {
           </Picker>
         </View>
 
+        <View style={{ marginBottom: 16 }}>
+          <Text style={[styles.label, { color: textColor }]}>Filter by Pest:</Text>
+          <Picker
+            selectedValue={selectedPestFilter}
+            onValueChange={(value) => setSelectedPestFilter(value)}
+            style={{ color: textColor }}
+          >
+            <Picker.Item label="All" value="All" />
+            <Picker.Item label="Pest Detected" value="Pest" />
+            <Picker.Item label="None" value="None" />
+          </Picker>
+        </View>
+
         {loading ? (
           <ActivityIndicator size="large" color={highlightColor} />
-        ) : filteredDetections.map((item, index) => (
-          <View key={`${item.id}_${index}`} style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>
-            <Text style={[styles.timestamp, { color: textColor }]}>📅 {item.id}</Text>
-
-            <TouchableWithoutFeedback
-              onPress={() =>
-                setVisibleImages((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
-              }
+        ) : filteredDetections.map((item, index) => {
+          const { formattedDate, formattedTime } = formatIdToDateTime(item.id);
+          return (
+            <View
+              key={`${item.id}_${index}`}
+              style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}
             >
-              <Text style={[styles.toggleText, { color: textColor }]}>
-                {visibleImages[item.id] ? '🔽 Hide Image' : '▶️ Show Image'}
-              </Text>
-            </TouchableWithoutFeedback>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                <Text style={[styles.timestamp, { color: textColor }]}>{formattedDate}</Text>
+                <Text style={[styles.timestamp, { color: textColor }]}>{formattedTime}</Text>
+              </View>
 
-            {visibleImages[item.id] && (
-              <TouchableWithoutFeedback onPress={() => {
-                setModalData(item);
-                setModalVisible(true);
-              }}>
-                <Image source={{ uri: item.detected_image_url }} style={styles.image} />
+              {item.transition && (
+                <Text
+                  style={{
+                    color: item.transitionColor || textColor,
+                    marginBottom: 6,
+                    fontWeight: '600',
+                  }}
+                >
+                  {item.transition}
+                </Text>
+              )}
+
+              {item.pestTransition && (
+                <Text
+                  style={{
+                    color: item.pestTransitionColor || textColor,
+                    marginBottom: 6,
+                    fontWeight: '600',
+                  }}
+                >
+                  {item.pestTransition}
+                </Text>
+              )}
+
+              {item.daysRemaining !== undefined && item.daysRemaining > 0 && (
+                <Text style={{ color: textColor, marginBottom: 6 }}>
+                  ⏳ {item.daysRemaining} day(s) to maturity (🗓️ {item.estimatedMaturityDate})
+                </Text>
+              )}
+
+              {item.daysRemaining === 0 && item.growth.growth_stage === 'Mature' && (
+                <Text style={{ color: '#22c55e', marginBottom: 6, fontWeight: '600' }}>
+                  ✅ Fully matured
+                </Text>
+              )}
+
+              <TouchableWithoutFeedback
+                onPress={() =>
+                  setVisibleImages((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
+                }
+              >
+                <Text style={[styles.toggleText, { color: textColor }]}>
+                  {visibleImages[item.id] ? '🔽 Hide Image' : '▶️ Show Image'}
+                </Text>
               </TouchableWithoutFeedback>
-            )}
-          </View>
-        ))}
+
+              {visibleImages[item.id] && (
+                <TouchableWithoutFeedback
+                  onPress={() => {
+                    setModalData(item);
+                    setModalVisible(true);
+                  }}
+                >
+                  <Image source={{ uri: item.detected_image_url }} style={styles.image} />
+                </TouchableWithoutFeedback>
+              )}
+            </View>
+          );
+        })}
       </ScrollView>
 
       <Modal visible={modalVisible} transparent animationType="fade">
