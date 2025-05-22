@@ -9,6 +9,7 @@ import {
   TouchableWithoutFeedback,
   Modal,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
@@ -52,7 +53,7 @@ export default function HistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalData, setModalData] = useState<Detection | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null); // null means show all dates
   const [selectedStage, setSelectedStage] = useState<string>('All');
   const [selectedPestFilter, setSelectedPestFilter] = useState<'All' | 'Pest' | 'None'>('All');
   const [showPicker, setShowPicker] = useState(false);
@@ -128,7 +129,6 @@ export default function HistoryScreen() {
           let currentStage = det.growth.growth_stage;
           const currentPest = det.growth.pest_detected;
 
-          // Replace invalid or "N/A" stage with last valid stage
           if (!validStages.includes(currentStage)) {
             if (lastValidStage) {
               currentStage = lastValidStage;
@@ -250,6 +250,7 @@ export default function HistoryScreen() {
 
         <View style={{ marginBottom: 16 }}>
           <Text style={[styles.label, { color: textColor }]}>Filter by Date:</Text>
+
           <TouchableWithoutFeedback onPress={() => setShowPicker(true)}>
             <View style={[styles.datePicker, { borderColor: cardBorder }]}>
               <Text style={{ color: textColor }}>
@@ -266,6 +267,16 @@ export default function HistoryScreen() {
               onChange={onChangeDate}
             />
           )}
+
+          {/* Show All Dates button */}
+          <TouchableOpacity
+            onPress={() => setSelectedDate(null)}
+            style={{ marginTop: 8 }}
+          >
+            <Text style={{ color: highlightColor, fontWeight: '600' }}>
+              🗑️ Show All Dates
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View style={{ marginBottom: 16 }}>
