@@ -1,15 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  Image,
-  TouchableWithoutFeedback,
-  Modal,
-  Platform,
-  TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, ActivityIndicator, Image,
+  TouchableWithoutFeedback, Modal, Platform, TouchableOpacity,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
@@ -36,6 +28,7 @@ export interface Detection {
     height_cm: number;
     leaf_area_cm2: number;
     leaf_count: number;
+    days_since_transplant: number;
   };
 }
 
@@ -53,7 +46,7 @@ export default function HistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalData, setModalData] = useState<Detection | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null); // null means show all dates
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedStage, setSelectedStage] = useState<string>('All');
   const [selectedPestFilter, setSelectedPestFilter] = useState<'All' | 'Pest' | 'None'>('All');
   const [showPicker, setShowPicker] = useState(false);
@@ -95,6 +88,11 @@ export default function HistoryScreen() {
             const leafData = growthData.leaf_data_per_box || [];
             const firstPlant = leafData[0];
 
+            const daysSinceTransplant =
+              (firstPlant && typeof firstPlant.days_since_transplant === 'number')
+                ? firstPlant.days_since_transplant
+                : 0;
+
             fetchedDetections.push({
               id,
               raw_image_url: rawUrl,
@@ -112,6 +110,7 @@ export default function HistoryScreen() {
                 height_cm: firstPlant?.height_cm || 0,
                 leaf_area_cm2: firstPlant?.largest_leaf_area || 0,
                 leaf_count: firstPlant?.leaf_count || 0,
+                days_since_transplant: daysSinceTransplant,
               },
             });
           } catch (err) {
@@ -120,7 +119,6 @@ export default function HistoryScreen() {
         }
 
         const validStages = ['Seedling', 'Vegetative', 'Mature'];
-
         let previousStage: string | null = null;
         let previousPest: string | null = null;
         let lastValidStage: string | null = null;
@@ -248,9 +246,9 @@ export default function HistoryScreen() {
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         <Text style={[styles.header, { color: highlightColor }]}>📜 Detection History</Text>
 
+        {/* Filters */}
         <View style={{ marginBottom: 16 }}>
           <Text style={[styles.label, { color: textColor }]}>Filter by Date:</Text>
-
           <TouchableWithoutFeedback onPress={() => setShowPicker(true)}>
             <View style={[styles.datePicker, { borderColor: cardBorder }]}>
               <Text style={{ color: textColor }}>
@@ -258,7 +256,6 @@ export default function HistoryScreen() {
               </Text>
             </View>
           </TouchableWithoutFeedback>
-
           {showPicker && (
             <DateTimePicker
               value={selectedDate || new Date()}
@@ -267,8 +264,6 @@ export default function HistoryScreen() {
               onChange={onChangeDate}
             />
           )}
-
-          {/* Show All Dates button */}
           <TouchableOpacity
             onPress={() => setSelectedDate(null)}
             style={{ marginTop: 8 }}
@@ -278,7 +273,6 @@ export default function HistoryScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-
         <View style={{ marginBottom: 16 }}>
           <Text style={[styles.label, { color: textColor }]}>Filter by Maturity:</Text>
           <Picker
@@ -292,7 +286,6 @@ export default function HistoryScreen() {
             <Picker.Item label="Mature" value="Mature" />
           </Picker>
         </View>
-
         <View style={{ marginBottom: 16 }}>
           <Text style={[styles.label, { color: textColor }]}>Filter by Pest:</Text>
           <Picker
@@ -310,6 +303,7 @@ export default function HistoryScreen() {
           <ActivityIndicator size="large" color={highlightColor} />
         ) : filteredDetections.map((item, index) => {
           const { formattedDate, formattedTime } = formatIdToDateTime(item.id);
+          const isVisible = visibleImages[item.id];
           return (
             <View
               key={`${item.id}_${index}`}
@@ -321,25 +315,21 @@ export default function HistoryScreen() {
               </View>
 
               {item.transition && (
-                <Text
-                  style={{
-                    color: item.transitionColor || textColor,
-                    marginBottom: 6,
-                    fontWeight: '600',
-                  }}
-                >
+                <Text style={{
+                  color: item.transitionColor || textColor,
+                  marginBottom: 6,
+                  fontWeight: '600',
+                }}>
                   {item.transition}
                 </Text>
               )}
 
               {item.pestTransition && (
-                <Text
-                  style={{
-                    color: item.pestTransitionColor || textColor,
-                    marginBottom: 6,
-                    fontWeight: '600',
-                  }}
-                >
+                <Text style={{
+                  color: item.pestTransitionColor || textColor,
+                  marginBottom: 6,
+                  fontWeight: '600',
+                }}>
                   {item.pestTransition}
                 </Text>
               )}
@@ -362,18 +352,32 @@ export default function HistoryScreen() {
                 }
               >
                 <Text style={[styles.toggleText, { color: textColor }]}>
-                  {visibleImages[item.id] ? '🔽 Hide Image' : '▶️ Show Image'}
+                  {isVisible ? '🔽 Hide Image' : '▶️ Show Image'}
                 </Text>
               </TouchableWithoutFeedback>
 
-              {visibleImages[item.id] && (
+              {/* Show details ONLY when the image is shown */}
+              {isVisible && (
                 <TouchableWithoutFeedback
                   onPress={() => {
                     setModalData(item);
                     setModalVisible(true);
                   }}
                 >
-                  <Image source={{ uri: item.detected_image_url }} style={styles.image} />
+                  <View>
+                    <Image source={{ uri: item.detected_image_url }} style={styles.image} />
+                    <Text style={{ color: textColor, marginTop: 2 }}>
+                      ⏳ Days Since Transplant: {typeof item.growth.days_since_transplant === 'number'
+                        ? item.growth.days_since_transplant
+                        : 0} days
+                    </Text>
+                    <Text style={{ color: textColor, marginTop: 2 }}>
+                      🌱 Growth Stage: {item.growth.growth_stage}
+                    </Text>
+                    <Text style={{ color: textColor, marginTop: 2 }}>
+                      🐛 Pest Detected: {item.growth.pest_detected}
+                    </Text>
+                  </View>
                 </TouchableWithoutFeedback>
               )}
             </View>
@@ -381,6 +385,7 @@ export default function HistoryScreen() {
         })}
       </ScrollView>
 
+      {/* Modal */}
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <ScrollView contentContainerStyle={styles.modalContent}>
@@ -400,6 +405,11 @@ export default function HistoryScreen() {
                 <Text style={styles.modalText}>📏 Height: {modalData.growth.height_cm} cm</Text>
                 <Text style={styles.modalText}>🍃 Leaf Area: {modalData.growth.leaf_area_cm2} cm²</Text>
                 <Text style={styles.modalText}>🌿 Leaf Count: {modalData.growth.leaf_count}</Text>
+                <Text style={styles.modalText}>
+                  ⏳ Days Since Transplant: {typeof modalData.growth.days_since_transplant === 'number'
+                    ? modalData.growth.days_since_transplant
+                    : 0} days
+                </Text>
                 <Text style={styles.modalText}>🌡 Air Temp: {modalData.environment.air_temperature_c}°C</Text>
                 <Text style={styles.modalText}>💧 Humidity: {modalData.environment.humidity_percent}%</Text>
                 <Text style={styles.modalText}>💡 Light: {modalData.environment.light_intensity_lux} lux</Text>
@@ -441,7 +451,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1.5,
     borderRadius: 10,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   modalOverlay: {
     flex: 1,
