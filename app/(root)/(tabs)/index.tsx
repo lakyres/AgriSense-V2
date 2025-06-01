@@ -323,9 +323,6 @@ export default function Home() {
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
                 Water Temp: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.environment.water_temperature_c}°C</Text>
               </Text>
-                <Text style={[styles.label, isDarkMode && styles.textMuted]}>
-                Days Since Transplant: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.growth.days_since_transplant}</Text>
-                </Text>
 
               <TouchableOpacity onPress={() => Linking.openURL(detection.detected_image_url)}>
                 <Text style={{ color: isDarkMode ? "#86efac" : "#15803D", fontWeight: "bold", marginTop: 10 }}>
