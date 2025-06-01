@@ -10,6 +10,7 @@ import { useThemeContext } from '@/lib/ThemeProvider';
 import { getDownloadURL, ref as storageRef } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { parse, format, addDays, differenceInCalendarDays } from 'date-fns';
+import ImageViewer from 'react-native-image-zoom-viewer'; // <== Import this!
 
 export interface Detection {
   id: string;
@@ -385,19 +386,39 @@ export default function HistoryScreen() {
         })}
       </ScrollView>
 
-      {/* Modal */}
+      {/* Zoomable Modal */}
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <ScrollView contentContainerStyle={styles.modalContent}>
-            <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
-              <Image
-                source={{ uri: modalData?.detected_image_url }}
-                style={styles.modalImage}
-              />
-            </TouchableWithoutFeedback>
-
-            {modalData && (
-              <View style={{ marginTop: 15 }}>
+          <View style={{ height: 320, width: '100%' }}>
+            <ImageViewer
+              imageUrls={[{ url: modalData?.detected_image_url || '' }]}
+              enableSwipeDown
+              onSwipeDown={() => setModalVisible(false)}
+              onCancel={() => setModalVisible(false)}
+              renderIndicator={() => <></>}
+              renderHeader={() => (
+                <TouchableOpacity
+                  onPress={() => setModalVisible(false)}
+                  style={{
+                    position: 'absolute',
+                    top: 40,
+                    right: 20,
+                    zIndex: 1,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    borderRadius: 20,
+                    padding: 8,
+                  }}>
+                  <Text style={{ color: '#fff', fontSize: 18 }}>✕</Text>
+                </TouchableOpacity>
+              )}
+              backgroundColor="rgba(0,0,0,0.85)"
+              saveToLocalByLongPress={false}
+            />
+          </View>
+          {/* Modal Details */}
+          {modalData && (
+            <ScrollView style={{ maxHeight: 210, marginTop: 20 }}>
+              <View>
                 <Text style={styles.modalText}>📅 {modalData.id}</Text>
                 <Text style={styles.modalText}>🌱 Plant Count: {modalData.growth.plant_count}</Text>
                 <Text style={styles.modalText}>🧬 Stage: {modalData.growth.growth_stage}</Text>
@@ -415,8 +436,8 @@ export default function HistoryScreen() {
                 <Text style={styles.modalText}>💡 Light: {modalData.environment.light_intensity_lux} lux</Text>
                 <Text style={styles.modalText}>🌊 Water Temp: {modalData.environment.water_temperature_c}°C</Text>
               </View>
-            )}
-          </ScrollView>
+            </ScrollView>
+          )}
         </View>
       </Modal>
     </SafeAreaView>
@@ -457,16 +478,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.85)',
     justifyContent: 'center',
-    padding: 20,
-  },
-  modalContent: {
     alignItems: 'center',
-  },
-  modalImage: {
-    width: '100%',
-    height: 300,
-    resizeMode: 'contain',
-    borderRadius: 10,
+    padding: 20,
   },
   modalText: {
     color: 'white',
@@ -484,3 +497,4 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 });
+
