@@ -27,17 +27,16 @@ export interface Detection {
     height_cm: number;
     leaf_area_cm2: number;
     leaf_count: number;
+    days_since_transplant: number; // ✅ added
   };
 }
 
 const formatTimestampToDateAndTime = (timestamp: string) => {
   if (!timestamp.includes('_')) return { date: timestamp, time: '' };
-
   const [datePart, timePart] = timestamp.split('_');
   const parsedDate = parse(datePart, 'yyyy-MM-dd', new Date());
   const formattedDate = format(parsedDate, 'MMMM d, yyyy');
   const formattedTime = timePart.replace(/-/g, ':');
-
   return { date: formattedDate, time: formattedTime };
 };
 
@@ -46,14 +45,13 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { isDarkMode } = useThemeContext();
-
   const [alertModalVisible, setAlertModalVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalData, setModalData] = useState<Detection | null>(null);
-
   const lastDetectionId = useRef<string | null>(null);
   const CACHE_BUSTER = `?t=${Date.now()}`;
+
 
   const fetchLatestDetection = async () => {
     try {
@@ -83,6 +81,11 @@ export default function Home() {
       const leafData = growthData.leaf_data_per_box || [];
       const firstPlant = leafData[0];
 
+      const avgDays = leafData.length > 0
+        ? Math.round(leafData.reduce((sum: number, plant: any) =>
+            sum + (plant.days_since_transplant || 0), 0) / leafData.length)
+        : 0;
+
       const latest: Detection = {
         id: latestId,
         raw_image_url: rawUrl,
@@ -100,6 +103,7 @@ export default function Home() {
           height_cm: firstPlant?.height_cm || 0,
           leaf_area_cm2: firstPlant?.largest_leaf_area || 0,
           leaf_count: firstPlant?.leaf_count || 0,
+          days_since_transplant: avgDays, // ✅ inserted
         },
       };
 
@@ -109,6 +113,7 @@ export default function Home() {
       return null;
     }
   };
+
 
   const checkAlertCondition = (latest: Detection) => {
     const alerts = [];
@@ -227,6 +232,9 @@ export default function Home() {
                 ✅ Latest Scan Summary
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                Days Since Transplant: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.growth.days_since_transplant}</Text>
+              </Text>
+              <Text style={[styles.label, isDarkMode && styles.textMuted]}>
                 Growth Stage: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.growth.growth_stage}</Text>
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
@@ -254,6 +262,11 @@ export default function Home() {
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
                 Pest-Detected: <Text style={[styles.value, isDarkMode && styles.textLight]}>
                   {detection.growth.pest_detected !== "None" ? 1 : 0}
+                </Text>
+              </Text>
+              <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                Matured Plants: <Text style={[styles.value, isDarkMode && styles.textLight]}>
+                  {detection.growth.growth_stage.toLowerCase() === "mature" ? detection.growth.plant_count : 0}
                 </Text>
               </Text>
             </View>
@@ -310,6 +323,9 @@ export default function Home() {
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
                 Water Temp: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.environment.water_temperature_c}°C</Text>
               </Text>
+                <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                Days Since Transplant: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.growth.days_since_transplant}</Text>
+                </Text>
 
               <TouchableOpacity onPress={() => Linking.openURL(detection.detected_image_url)}>
                 <Text style={{ color: isDarkMode ? "#86efac" : "#15803D", fontWeight: "bold", marginTop: 10 }}>
@@ -368,6 +384,9 @@ export default function Home() {
             />
             <Text style={styles.modalText}>
               🐛 Pest Detected: {modalData?.growth.pest_detected || "None"}
+            </Text>
+            <Text style={styles.modalText}>
+              📅 Days Since Transplant: {modalData?.growth.days_since_transplant || "N/A"}
             </Text>
             <Text style={styles.modalText}>
               🌱 Growth Stage: {modalData?.growth.growth_stage || "N/A"}
