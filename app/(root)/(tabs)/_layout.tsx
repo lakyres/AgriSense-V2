@@ -3,16 +3,20 @@ import { Image, Text, View, ImageSourcePropType } from "react-native";
 import icons from "@/constants/icons";
 import { useThemeContext } from "@/lib/ThemeProvider";
 
-const TabIcon = ({
-  focused,
-  icon,
-  title,
-  isDarkMode,
-}: {
+import React from "react";
+
+type TabIconProps = {
   focused: boolean;
   icon: ImageSourcePropType;
   title: string;
   isDarkMode: boolean;
+};
+
+const TabIcon: React.FC<TabIconProps> = ({
+  focused,
+  icon,
+  title,
+  isDarkMode,
 }) => (
   <View
     style={{
@@ -85,16 +89,7 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="scan"
-        options={{
-          title: "Scan",
-          headerShown: false,
-          tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} icon={icons.search} title="Scan" isDarkMode={isDarkMode} />
-          ),
-        }}
-      />
+
       <Tabs.Screen
         name="about"
         options={{

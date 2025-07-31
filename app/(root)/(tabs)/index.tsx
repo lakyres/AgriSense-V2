@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeContext } from "@/lib/ThemeProvider";
 import { auth, storage } from "@/lib/firebase";
 import { getDownloadURL, ref as storageRef } from "firebase/storage";
+import { parse, format } from "date-fns";
 
 export interface Detection {
   id: string;
@@ -26,27 +27,31 @@ export interface Detection {
     height_cm: number;
     leaf_area_cm2: number;
     leaf_count: number;
+    days_since_transplant: number; // ✅ added
   };
 }
+
+const formatTimestampToDateAndTime = (timestamp: string) => {
+  if (!timestamp.includes('_')) return { date: timestamp, time: '' };
+  const [datePart, timePart] = timestamp.split('_');
+  const parsedDate = parse(datePart, 'yyyy-MM-dd', new Date());
+  const formattedDate = format(parsedDate, 'MMMM d, yyyy');
+  const formattedTime = timePart.replace(/-/g, ':');
+  return { date: formattedDate, time: formattedTime };
+};
 
 export default function Home() {
   const [detection, setDetection] = useState<Detection | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { isDarkMode } = useThemeContext();
-
-  // Modal alert states for alerts
   const [alertModalVisible, setAlertModalVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
-
-  // Modal for detected image tap details
   const [modalVisible, setModalVisible] = useState(false);
   const [modalData, setModalData] = useState<Detection | null>(null);
-
-  // Track last detection ID to avoid repeated alerts
   const lastDetectionId = useRef<string | null>(null);
-
   const CACHE_BUSTER = `?t=${Date.now()}`;
+
 
   const fetchLatestDetection = async () => {
     try {
@@ -76,6 +81,11 @@ export default function Home() {
       const leafData = growthData.leaf_data_per_box || [];
       const firstPlant = leafData[0];
 
+      const avgDays = leafData.length > 0
+        ? Math.round(leafData.reduce((sum: number, plant: any) =>
+            sum + (plant.days_since_transplant || 0), 0) / leafData.length)
+        : 0;
+
       const latest: Detection = {
         id: latestId,
         raw_image_url: rawUrl,
@@ -93,6 +103,7 @@ export default function Home() {
           height_cm: firstPlant?.height_cm || 0,
           leaf_area_cm2: firstPlant?.largest_leaf_area || 0,
           leaf_count: firstPlant?.leaf_count || 0,
+          days_since_transplant: avgDays, // ✅ inserted
         },
       };
 
@@ -102,6 +113,7 @@ export default function Home() {
       return null;
     }
   };
+
 
   const checkAlertCondition = (latest: Detection) => {
     const alerts = [];
@@ -138,8 +150,7 @@ export default function Home() {
       alerts.push(`Warning: High humidity (${latest.environment.humidity_percent.toFixed(1)}%)`);
     }
 
-    if (alerts.length === 0) return null;
-    return alerts.join("\n");
+    return alerts.length > 0 ? alerts.join("\n") : null;
   };
 
   const fetchAndUpdate = async () => {
@@ -173,7 +184,6 @@ export default function Home() {
     setRefreshing(false);
   };
 
-  // Open modal on detected image tap
   const openModal = () => {
     if (detection) {
       setModalData(detection);
@@ -222,6 +232,9 @@ export default function Home() {
                 ✅ Latest Scan Summary
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                Days Since Transplant: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.growth.days_since_transplant}</Text>
+              </Text>
+              <Text style={[styles.label, isDarkMode && styles.textMuted]}>
                 Growth Stage: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.growth.growth_stage}</Text>
               </Text>
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
@@ -251,6 +264,11 @@ export default function Home() {
                   {detection.growth.pest_detected !== "None" ? 1 : 0}
                 </Text>
               </Text>
+              <Text style={[styles.label, isDarkMode && styles.textMuted]}>
+                Matured Plants: <Text style={[styles.value, isDarkMode && styles.textLight]}>
+                  {detection.growth.growth_stage.toLowerCase() === "mature" ? detection.growth.plant_count : 0}
+                </Text>
+              </Text>
             </View>
 
             <View style={[styles.card, isDarkMode && styles.cardDark]}>
@@ -267,7 +285,23 @@ export default function Home() {
                 </View>
               </View>
 
-              <Text style={[styles.timestamp, isDarkMode && styles.textMuted]}>{detection.id}</Text>
+              {/* Timestamp with separate Date & Time */}
+              <View style={{ marginBottom: 12 }}>
+                {(() => {
+                  const { date, time } = formatTimestampToDateAndTime(detection.id);
+                  return (
+                    <>
+                      <Text style={[styles.timestamp, isDarkMode && styles.textMuted]}>
+                        Date: {date}
+                      </Text>
+                      <Text style={[styles.timestamp, isDarkMode && styles.textMuted]}>
+                        Time: {time}
+                      </Text>
+                    </>
+                  );
+                })()}
+              </View>
+
               <Text style={[styles.label, isDarkMode && styles.textMuted]}>
                 Height: <Text style={[styles.value, isDarkMode && styles.textLight]}>{detection.growth.height_cm} cm</Text>
               </Text>
@@ -347,6 +381,9 @@ export default function Home() {
             />
             <Text style={styles.modalText}>
               🐛 Pest Detected: {modalData?.growth.pest_detected || "None"}
+            </Text>
+            <Text style={styles.modalText}>
+              📅 Days Since Transplant: {modalData?.growth.days_since_transplant || "N/A"}
             </Text>
             <Text style={styles.modalText}>
               🌱 Growth Stage: {modalData?.growth.growth_stage || "N/A"}
@@ -440,7 +477,7 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 12,
     color: '#6B7280',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   label: {
     fontSize: 14,
@@ -483,14 +520,14 @@ const styles = StyleSheet.create({
   modalText: {
     fontSize: 16,
     marginTop: 4,
-    color: '#ffffff',  // Changed to white
+    color: '#ffffff',
   },
   modalLabel: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 6,
     marginTop: 10,
-    color: '#ffffff', // Changed to white
+    color: '#ffffff',
   },
   closeButton: {
     marginTop: 20,
